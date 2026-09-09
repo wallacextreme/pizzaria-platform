@@ -10,6 +10,7 @@ import { Footer } from "@/components/layout/Footer";
 import { CatalogSection } from "@/components/catalog/CatalogSection";
 import { PizzaBuilderModal } from "@/components/builder/PizzaBuilderModal";
 import { CartDrawer } from "@/components/cart/CartDrawer";
+import { CheckoutModal } from "@/components/checkout/CheckoutModal";
 import { useCartStore } from "@/store/cartStore";
 import { MOCK_STORE_SETTINGS, MOCK_CATEGORIES, MOCK_PRODUCTS } from "@/lib/mockData";
 import type { Product, OrderItem } from "@/types/domain";
@@ -19,6 +20,7 @@ function MainAppContent() {
   const { showToast } = useToast();
   const [builderProduct, setBuilderProduct] = React.useState<Product | null>(null);
   const [isBuilderOpen, setIsBuilderOpen] = React.useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = React.useState(false);
 
   // Zustand Store Hooks
   const addItem = useCartStore((s) => s.addItem);
@@ -116,7 +118,13 @@ function MainAppContent() {
       />
 
       {/* 8. Drawer do Carrinho Conectado */}
-      <CartDrawer />
+      <CartDrawer onOpenCheckout={() => setIsCheckoutOpen(true)} />
+
+      {/* 9. Modal de Checkout Completo */}
+      <CheckoutModal
+        isOpen={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+      />
     </div>
   );
 }

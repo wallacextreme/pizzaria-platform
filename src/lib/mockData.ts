@@ -6,7 +6,55 @@
  * em centavos inteiros (cents), prontas para migração e testes.
  */
 
-import type { StoreSettings, Category, PizzaSize, CrustOption, ExtraOption, Product } from "@/types/domain";
+import type { StoreSettings, Category, PizzaSize, CrustOption, ExtraOption, Product, DeliveryZone } from "@/types/domain";
+
+export const MOCK_DELIVERY_ZONES: DeliveryZone[] = [
+  {
+    id: "zone-1",
+    neighborhood: "Vila Gastronômica",
+    fee_cents: 500, // R$ 5,00
+    estimated_time_minutes: 35,
+    active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "zone-2",
+    neighborhood: "Centro Histórico",
+    fee_cents: 700, // R$ 7,00
+    estimated_time_minutes: 40,
+    active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "zone-3",
+    neighborhood: "Jardim das Flores",
+    fee_cents: 900, // R$ 9,00
+    estimated_time_minutes: 45,
+    active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "zone-4",
+    neighborhood: "Bairro Alto",
+    fee_cents: 1200, // R$ 12,00
+    estimated_time_minutes: 50,
+    active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "zone-5",
+    neighborhood: "Parque das Nações",
+    fee_cents: 1500, // R$ 15,00
+    estimated_time_minutes: 55,
+    active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
 
 export const MOCK_STORE_SETTINGS: StoreSettings = {
   id: "store-singleton-id",

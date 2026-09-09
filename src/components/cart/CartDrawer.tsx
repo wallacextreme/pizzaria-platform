@@ -5,7 +5,6 @@ import { useCartStore } from "@/store/cartStore";
 import { formatCentsToBRL } from "@/domain/currency";
 import { Drawer } from "@/components/ui/Drawer";
 import { Button } from "@/components/ui/Button";
-import { useToast } from "@/components/ui/Toast";
 import {
   ShoppingBag,
   Trash2,
@@ -15,8 +14,11 @@ import {
   Info,
 } from "lucide-react";
 
-export function CartDrawer() {
-  const { showToast } = useToast();
+interface CartDrawerProps {
+  onOpenCheckout?: () => void;
+}
+
+export function CartDrawer({ onOpenCheckout }: CartDrawerProps) {
   const {
     items,
     isOpen,
@@ -197,11 +199,9 @@ export function CartDrawer() {
                 size="lg"
                 className="w-full font-bold justify-between px-5"
                 onClick={() => {
-                  showToast(
-                    "O fluxo de entrega, CEP e pagamento será habilitado na Fase 3.",
-                    "info",
-                    "Avançar para Checkout (Fase 3)"
-                  );
+                  if (onOpenCheckout) {
+                    onOpenCheckout();
+                  }
                 }}
               >
                 <span>Prosseguir para Checkout</span>

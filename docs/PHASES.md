@@ -18,27 +18,26 @@ Construção estritamente incremental. Nenhuma fase é iniciada sem a aprovaçã
 
 ## FASE 2 — CARDÁPIO, CONSTRUTOR DE PIZZA & CARRINHO INTELIGENTE
 - **Status**: CONCLUÍDA E APROVADA (Gate F2: PASS)
-- **Entregáveis Concluídos**:
-  - Motor de cálculo de preços de domínio em centavos inteiros (`calculateItemPrice` em `src/domain/pricing.ts`).
-  - Suporte completo a Sabor Único, Meio a Meio por `maior_valor` e `media_ponderada`, Bordas e Extras.
-  - Catálogo de produtos com abas de categorias, contagem, busca instantânea e filtros rápidos.
-  - Modal Construtor de Pizza (`PizzaBuilderModal`) com visualização de fatias, seleção de 2º sabor, bordas, adicionais e remoção de ingredientes.
-  - Carrinho de compras gerenciado por Zustand (`cartStore.ts`) com persistência em `localStorage` e reidratação segura.
-  - Drawer do Carrinho com detalhamento completo da itemização e alteração de quantidade.
-  - 57 testes automatizados passando (unitários de precificação, carrinho, componentes e integração).
-  - Testes em navegador desktop e mobile concluídos com 0 erros.
-- **Quality Gate F2**: PASS (Build OK, Types OK, Lint OK, Testes OK, UX/Mobile OK).
+- **Commit**: `2b1f752`
 
 ---
 
 ## FASE 3 — CHECKOUT, ANTI-TAMPERING & INTEGRAÇÃO WHATSAPP
-- **Status**: PRONTO PARA INICIAR (Aguardando autorização)
-- **Objetivo**: Implementar fluxo de checkout (Delivery vs Retirada), consulta de CEP com ViaCEP e fallback manual resiliente, cálculo de taxa de entrega, opções de pagamento (Pix, Cartão, Dinheiro com troco) e proteção rígida contra adulteração de preços na API `/api/orders`.
+- **Status**: CONCLUÍDA E APROVADA (Gate F3: PASS)
+- **Entregáveis Concluídos**:
+  - Modal de Checkout (`CheckoutModal`) com alternância Delivery/Retirada e seleção de pagamento (Pix, Cartão, Dinheiro).
+  - Consulta automática de CEP com auto-fill e fallback manual transparente (`viacep.ts`).
+  - Motor de validação estrita e recálculo total no servidor contra manipulação de preços (`orderValidator.ts`).
+  - Endpoint `/api/orders` (POST para criação segura de pedidos e GET para consulta por ID/display_id).
+  - Formatador e gerador de URL do WhatsApp (`whatsapp.ts`).
+  - Página de rastreamento e confirmação de pedido (`/pedido/[id]`).
+  - 69 testes automatizados passando (incluindo testes de segurança anti-tampering).
+- **Quality Gate F3**: PASS (Build OK, Types OK, Lint OK, Testes OK, UX/Mobile OK).
 
 ---
 
 ## FASE 4 — BACKEND SUPABASE, RLS, STORAGE & UPLOAD WEBP
-- **Status**: PENDENTE (Bloqueado por Gate F3)
+- **Status**: PRONTO PARA INICIAR (Aguardando autorização)
 - **Objetivo**: Configurar infraestrutura oficial do Supabase/PostgreSQL com migrações SQL, tabelas completas, triggers, políticas de RLS granulares com RBAC (`user_roles`) e pipeline de upload com conversão WebP via Canvas API.
 
 ---
