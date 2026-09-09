@@ -1,8 +1,8 @@
 # Status do Projeto — Plataforma de Pizzaria Full-Stack
 
 **Última Atualização**: 2026-09-09
-**Fase Atual**: FASE 3 — CHECKOUT, ANTI-TAMPERING & INTEGRAÇÃO WHATSAPP
-**Status Geral**: FASE 3 CONCLUÍDA E APROVADA (Gate F3: PASS)
+**Fase Atual**: FASE 4 — BACKEND SUPABASE, RLS, STORAGE & UPLOAD WEBP
+**Status Geral**: FASE 4 CONCLUÍDA E APROVADA (Gate F4: PASS)
 
 ---
 
@@ -14,9 +14,10 @@
 | **Fase 1** | Foundation + Design System Gastronômico | **CONCLUÍDA** | **PASS** |
 | **Fase 2** | Cardápio + Construtor de Pizza + Carrinho | **CONCLUÍDA** | **PASS** |
 | **Fase 3** | Checkout + Anti-Tampering + WhatsApp | **CONCLUÍDA** | **PASS** |
-| **Fase 4** | Backend Supabase + RLS + Storage WebP | **PRONTO PARA INICIAR** | Pendente autorização |
-| **Fase 5** | Admin + Kanban Realtime + Alerta Sonoro | PENDENTE | Bloqueado por Gate F4 |
+| **Fase 4** | Backend Supabase + RLS + Storage WebP | **CONCLUÍDA** | **PASS** |
+| **Fase 5** | Admin + Kanban Realtime + Alerta Sonoro | **PRONTO PARA INICIAR** | Pendente autorização |
 | **Fase 6** | Polimento + Acessibilidade + Auditoria 10/10 | PENDENTE | Bloqueado por Gate F5 |
+
 
 ---
 
@@ -47,5 +48,38 @@
 - [x] TypeScript estrito validado sem erros (`tsc --noEmit`).
 - [x] ESLint executado sem erros ou warnings (`next lint`).
 - [x] Compilação de produção Next.js validada com sucesso (`next build`).
-- [x] Teste de Navegador Real (desktop e mobile 390px) validado com sucesso via subagente.
 - [x] Checkpoint Git registrado para Fase 3.
+
+---
+
+## 3. Checklist do Gate F4 (Critérios de Aceite Validados)
+
+- [x] Esquema Físico PostgreSQL (`supabase/migrations/001_initial_schema.sql`):
+  - Tabelas completas com chaves estrangeiras, restrições e triggers: `categories`, `products`, `delivery_zones`, `orders`, `store_settings`, `user_roles`.
+  - Trigger automático `handle_updated_at` aplicado em todas as tabelas modificáveis.
+- [x] Políticas RLS Estritas & Funções SECURITY DEFINER (`supabase/migrations/002_rls_policies.sql`):
+  - `is_admin(uid)` e `is_staff_or_admin(uid)` com `SECURITY DEFINER` para evitar escalada de privilégios.
+  - Leitura pública apenas para dados ativos; escrita, alteração e exclusão estritamente restritas a admin ou staff.
+  - Proteção contra bypass de autenticação simples.
+- [x] Configuração e Políticas de Storage (`supabase/migrations/004_storage_setup.sql`):
+  - Bucket `products` com leitura pública e restrições de escrita/atualização para staff/admin ou service role.
+- [x] Pipeline Client-Side Canvas WebP (`src/lib/imageProcessor.ts`):
+  - Conversão em tempo real no navegador para formato WebP com qualidade 0.82.
+  - Limitação proporcional a 1200px da maior dimensão preservando aspect ratio.
+  - Remoção completa de metadados EXIF e dados sensíveis de geolocalização.
+  - Suporte a Drag and Drop, seleção tradicional de arquivo e Ctrl+V (Clipboard API).
+- [x] Endpoint de Upload Seguro & Anti-Tampering (`src/app/api/upload/route.ts`):
+  - Verificação profunda de Magic Bytes (`RIFF` + `WEBP`) no backend.
+  - Rejeição de payloads malformados ou falsos WebP (status 400).
+  - Limite estrito de 5MB por requisição (status 413).
+  - Modo híbrido inteligente: upload direto para Supabase Storage se credenciais ativas, ou armazenamento seguro local com fallback para testes offline.
+- [x] Implementação Concreta dos Repositórios Supabase (`src/repositories/supabase/`):
+  - `SupabaseCategoryRepository`, `SupabaseProductRepository`, `SupabaseDeliveryZoneRepository`, `SupabaseOrderRepository`, `SupabaseStoreSettingsRepository`, `SupabaseUserRoleRepository`.
+  - Total desacoplamento via injeção de `SupabaseClient`.
+- [x] Suíte de Testes Automatizados: 92/92 testes passando (13 suítes completas no Vitest).
+- [x] TypeScript estrito validado com 0 erros (`tsc --noEmit`).
+- [x] ESLint validado com 0 erros ou warnings (`next lint`).
+- [x] Compilação de Produção validada com sucesso (`next build`).
+- [x] Teste de Navegador Real com captura visual da interface de upload em `http://localhost:3000/upload-demo`.
+- [x] Checkpoint Git preparado para Fase 4.
+

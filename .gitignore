@@ -28,6 +28,10 @@ bun.lock*
 .env*.local
 .env
 
+# uploads
+/public/uploads/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+

@@ -37,8 +37,20 @@ Construção estritamente incremental. Nenhuma fase é iniciada sem a aprovaçã
 ---
 
 ## FASE 4 — BACKEND SUPABASE, RLS, STORAGE & UPLOAD WEBP
-- **Status**: PRONTO PARA INICIAR (Aguardando autorização)
-- **Objetivo**: Configurar infraestrutura oficial do Supabase/PostgreSQL com migrações SQL, tabelas completas, triggers, políticas de RLS granulares com RBAC (`user_roles`) e pipeline de upload com conversão WebP via Canvas API.
+- **Status**: CONCLUÍDA E APROVADA (Gate F4: PASS)
+- **Entregáveis Concluídos**:
+  - Migração de esquema físico PostgreSQL com chaves, checks e triggers (`001_initial_schema.sql`).
+  - Migração de RLS estrito com funções de segurança RBAC `is_admin` e `is_staff_or_admin` via `SECURITY DEFINER` (`002_rls_policies.sql`).
+  - Migração de dados semente (categorias, zonas de entrega e configurações da loja) (`003_seed_data.sql`).
+  - Migração e políticas de Storage para o bucket `products` com leitura pública e escrita restrita (`004_storage_setup.sql`).
+  - Clientes Supabase estruturados para Browser (`client.ts`), Servidor SSR (`server.ts`) e Admin Service Role (`admin.ts`).
+  - Pipeline de processamento de imagens no cliente via Canvas API (`imageProcessor.ts`): conversão para WebP (0.82), redimensionamento proporcional a 1200px, remoção de EXIF.
+  - Componente de upload acessível (`ImageUpload.tsx`) com suporte a Drag and Drop, seleção e Ctrl+V.
+  - Endpoint de upload seguro com inspeção profunda de Magic Bytes RIFF/WEBP e fallback offline para testes (`/api/upload/route.ts`).
+  - Implementações concretas de repositórios Supabase (`SupabaseCategoryRepository`, `SupabaseProductRepository`, `SupabaseDeliveryZoneRepository`, `SupabaseOrderRepository`, `SupabaseStoreSettingsRepository`, `SupabaseUserRoleRepository`).
+  - 92 testes automatizados passando (13 suítes completas no Vitest).
+- **Quality Gate F4**: PASS (Build OK, Types OK, Lint OK, Testes OK, Pipeline WebP OK, RLS OK).
+
 
 ---
 
