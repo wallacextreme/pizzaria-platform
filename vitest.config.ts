@@ -4,7 +4,7 @@ import path from "path";
 export default defineConfig({
   test: {
     globals: true,
-    environment: "node",
+    environment: "happy-dom",
   },
   resolve: {
     alias: {
