@@ -17,7 +17,10 @@ export function formatCentsToBRL(cents: number): string {
   }).format(realValue);
 }
 
+export const formatCurrency = formatCentsToBRL;
+
 export function parseBRLInputToCents(raw: string): number {
+
   // Remove todos os caracteres não numéricos
   const cleaned = raw.replace(/\D/g, "");
   if (!cleaned) return 0;

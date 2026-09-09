@@ -55,11 +55,21 @@ Construção estritamente incremental. Nenhuma fase é iniciada sem a aprovaçã
 ---
 
 ## FASE 5 — PAINEL ADMINISTRATIVO & KANBAN EM TEMPO REAL
-- **Status**: PENDENTE (Bloqueado por Gate F4)
-- **Objetivo**: Criar o painel administrativo protegido, dashboard operacional com métricas, quadro Kanban com transição de status em tempo real (Supabase Realtime), alerta sonoro via Web Audio API, gerenciamento de produtos/categorias e controle de horários da loja.
+- **Status**: CONCLUÍDA E APROVADA (Gate F5: PASS)
+- **Entregáveis Concluídos**:
+  - Autenticação com sessão protegida e Route Guards (`adminAuthStore.ts` e `/admin/login`).
+  - Painel Operacional com 4 Cards de Métricas em tempo real (`MetricsCards.tsx`).
+  - Quadro Kanban de Cozinha com 5 colunas de status (`KanbanBoard.tsx`).
+  - Card de Pedido gastronômico com destaque para ingredientes removidos, tempo decorrido e avanço de status (`OrderCard.tsx`).
+  - Endpoint de atualização de status de pedidos (`PATCH /api/orders`).
+  - Alerta sonoro sintetizado nativo via Web Audio API (`audioNotifier.ts`).
+  - Painel de Operação & Loja com controle manual de funcionamento e pausa de produtos (`ProductManagement.tsx`).
+  - 103 testes automatizados passando (15 suítes no Vitest).
+- **Quality Gate F5**: PASS (Build OK, Types OK, Lint OK, Testes OK, UX/Kanban OK, Audio OK).
 
 ---
 
 ## FASE 6 — POLIMENTO, ACESSIBILIDADE, PERFORMANCE & AUDITORIA FINAL
-- **Status**: PENDENTE (Bloqueado por Gate F5)
+- **Status**: PRONTO PARA INICIAR (Aguardando autorização)
+
 - **Objetivo**: Refinar toda a experiência de usuário com skeletons, empty states, error boundaries, auditoria WCAG 2.1 AA de acessibilidade, otimização de SEO com Schema.org (`Restaurant`, `Menu`), auditoria global de regressão e certificação de prontidão para produção.

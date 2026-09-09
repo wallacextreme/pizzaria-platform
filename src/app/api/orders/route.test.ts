@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { POST, GET } from "./route";
+import { POST, GET, PATCH } from "./route";
+
 import { globalOrderRepository } from "@/repositories/mockOrderRepository";
 
 describe("API Route /api/orders & Anti-Tampering Security Suite", () => {
@@ -148,4 +149,39 @@ describe("API Route /api/orders & Anti-Tampering Security Suite", () => {
     expect(getJson.order.id).toBe(createdId);
     expect(getJson.order.customer.name).toBe("Mariana Oliveira");
   });
+
+  it("deve atualizar o status do pedido via PATCH", async () => {
+    // 1. Cria pedido inicial com status 'novo'
+    const postReq = new Request("http://localhost:3000/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(validDeliveryPayload),
+    });
+    const postRes = await POST(postReq);
+    const postJson = await postRes.json();
+    const orderId = postJson.order.id;
+
+    // 2. Atualiza para 'em_preparo'
+    const patchReq = new Request("http://localhost:3000/api/orders", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: orderId, status: "em_preparo" }),
+    });
+    const patchRes = await PATCH(patchReq);
+    expect(patchRes.status).toBe(200);
+
+    const patchJson = await patchRes.json();
+    expect(patchJson.success).toBe(true);
+    expect(patchJson.order.status).toBe("em_preparo");
+
+    // 3. Rejeita status inválido com 400
+    const invalidPatchReq = new Request("http://localhost:3000/api/orders", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: orderId, status: "status_inexistente" }),
+    });
+    const invalidPatchRes = await PATCH(invalidPatchReq);
+    expect(invalidPatchRes.status).toBe(400);
+  });
 });
+

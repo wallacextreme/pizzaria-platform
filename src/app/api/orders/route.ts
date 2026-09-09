@@ -86,3 +86,40 @@ export async function GET(request: Request) {
 
   return NextResponse.json({ success: true, order });
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    const { id, status } = body;
+
+    const validStatuses = ["novo", "em_preparo", "no_forno", "saiu_para_entrega", "concluido", "cancelado"];
+
+    if (!id || typeof id !== "string") {
+      return NextResponse.json(
+        { success: false, error: "ID do pedido é obrigatório." },
+        { status: 400 }
+      );
+    }
+
+    if (!status || !validStatuses.includes(status)) {
+      return NextResponse.json(
+        { success: false, error: `Status inválido: "${status}".` },
+        { status: 400 }
+      );
+    }
+
+    const updatedOrder = await globalOrderRepository.updateStatus(id, status);
+
+    return NextResponse.json({
+      success: true,
+      order: updatedOrder,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Erro ao atualizar pedido.";
+    return NextResponse.json(
+      { success: false, error: message },
+      { status: 500 }
+    );
+  }
+}
+
