@@ -12,34 +12,27 @@ Construção estritamente incremental. Nenhuma fase é iniciada sem a aprovaçã
 
 ## FASE 1 — FOUNDATION & DESIGN SYSTEM GASTRONÔMICO
 - **Status**: CONCLUÍDA E APROVADA (Gate F1: PASS)
-- **Entregáveis Concluídos**:
-  - Design tokens em Tailwind e CSS Variables (Terracotta, Manjericão, Forno/Queijo, Carvão).
-  - Componentes base acessíveis (Button, Badge com pulso, Input com erro, Card, Tabs, Dialog, Drawer, Skeleton, Toast).
-  - Header responsivo, Banner promocional e indicador de loja aberta/fechada em tempo real com modal de horários.
-  - Barra de navegação inferior mobile (`BottomNav`).
-  - Suíte de testes: 28 testes passando (domínio de horários, moeda e componentes UI).
-  - Testes de responsividade em navegador cobrindo de 360px a 1440px+.
-- **Quality Gate F1**: PASS (Build OK, Types OK, Lint OK, Testes OK, Responsividade OK).
+- **Commit**: `6dae654`
 
 ---
 
 ## FASE 2 — CARDÁPIO, CONSTRUTOR DE PIZZA & CARRINHO INTELIGENTE
-- **Status**: PRONTO PARA INICIAR (Aguardando autorização)
-- **Objetivo**: Implementar navegação de produtos por categoria, pesquisa instantânea, modal de montagem de pizza (meio a meio, tamanhos, bordas, extras, remoção de ingredientes) e carrinho persistente com Zustand.
-- **Entregáveis**:
-  - Catálogo de produtos com filtros e pesquisa.
-  - Modal Construtor de Pizza com preview de preço em tempo real.
-  - Motor de domínio de cálculo de preço (`maior_valor` vs `media_ponderada`).
-  - Carrinho com persistência em `localStorage` e reidratação segura.
-- **Quality Gate F2**:
-  - Testes unitários para todas as combinações de precificação e meio a meio.
-  - Testes do Zustand store.
-  - Build e tipos 100% OK. Checkpoint Git.
+- **Status**: CONCLUÍDA E APROVADA (Gate F2: PASS)
+- **Entregáveis Concluídos**:
+  - Motor de cálculo de preços de domínio em centavos inteiros (`calculateItemPrice` em `src/domain/pricing.ts`).
+  - Suporte completo a Sabor Único, Meio a Meio por `maior_valor` e `media_ponderada`, Bordas e Extras.
+  - Catálogo de produtos com abas de categorias, contagem, busca instantânea e filtros rápidos.
+  - Modal Construtor de Pizza (`PizzaBuilderModal`) com visualização de fatias, seleção de 2º sabor, bordas, adicionais e remoção de ingredientes.
+  - Carrinho de compras gerenciado por Zustand (`cartStore.ts`) com persistência em `localStorage` e reidratação segura.
+  - Drawer do Carrinho com detalhamento completo da itemização e alteração de quantidade.
+  - 57 testes automatizados passando (unitários de precificação, carrinho, componentes e integração).
+  - Testes em navegador desktop e mobile concluídos com 0 erros.
+- **Quality Gate F2**: PASS (Build OK, Types OK, Lint OK, Testes OK, UX/Mobile OK).
 
 ---
 
 ## FASE 3 — CHECKOUT, ANTI-TAMPERING & INTEGRAÇÃO WHATSAPP
-- **Status**: PENDENTE (Bloqueado por Gate F2)
+- **Status**: PRONTO PARA INICIAR (Aguardando autorização)
 - **Objetivo**: Implementar fluxo de checkout (Delivery vs Retirada), consulta de CEP com ViaCEP e fallback manual resiliente, cálculo de taxa de entrega, opções de pagamento (Pix, Cartão, Dinheiro com troco) e proteção rígida contra adulteração de preços na API `/api/orders`.
 
 ---
