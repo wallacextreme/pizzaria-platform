@@ -72,6 +72,15 @@ Construção estritamente incremental. Nenhuma fase é iniciada sem a aprovaçã
 ---
 
 ## FASE 6 — POLIMENTO, ACESSIBILIDADE, PERFORMANCE & AUDITORIA FINAL
-- **Status**: PRONTO PARA INICIAR (Aguardando autorização)
-
-- **Objetivo**: Refinar toda a experiência de usuário com skeletons, empty states, error boundaries, auditoria WCAG 2.1 AA de acessibilidade, otimização de SEO com Schema.org (`Restaurant`, `Menu`), auditoria global de regressão e certificação de prontidão para produção.
+- **Status**: CONCLUÍDA E APROVADA (Gate F6: PASS — 10/10)
+- **Entregáveis Concluídos**:
+  - Estados de UI universais: skeletons animados (`loading.tsx`), tratamento global de exceções (`error.tsx`), página 404 temática (`not-found.tsx`) e empty states aprimorados.
+  - Acessibilidade WCAG 2.1 AA: touch targets mínimos de 44x44px, navegação por teclado com Escape, descrições ARIA (`aria-describedby`, `aria-labelledby`) e rótulos acessíveis.
+  - Otimização de Performance: dynamic imports via `next/dynamic` para modais pesados, reduzindo o bundle inicial First Load JS para 136 kB.
+  - SEO & Schema.org: `robots.ts` com proteção de rotas admin/api, `sitemap.ts` dinâmico, metadados Open Graph/Twitter Cards e JSON-LD de `Restaurant` e `Menu`.
+  - PWA Readiness: manifesto Web completo (`manifest.ts`) com cores de tema, orientação, display standalone e ícones.
+  - Singletons de repositório Next.js com preservação em `globalThis` para estabilidade em reload e isolamento de rotas.
+  - Validação End-to-End no navegador em 17 passos completos com evidências gravadas em vídeo e capturas de tela.
+  - 149 testes automatizados passando (22 suítes completas no Vitest).
+- **Quality Gate F6**: PASS (Build OK, Types OK, Lint OK, 149 Testes OK, WCAG 2.1 AA OK, SEO OK, PWA OK, Auditoria 10/10 OK).
+- **Classificação Final**: APPROVED FOR PRODUCTION

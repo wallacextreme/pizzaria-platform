@@ -118,3 +118,17 @@ Todas as métricas operacionais compartilham uma única fórmula e fonte de verd
   3. Carrinhos de compras existentes mantêm o item sem quebrar a interface do cliente.
   4. Na tentativa de checkout posterior, o motor de validação (`orderValidator.ts`) rejeita a criação do pedido informando amigavelmente que o produto foi pausado e não está mais disponível.
 
+---
+
+## 10. Transparência Gastronômica, Acessibilidade & Persistência (Fase 6)
+
+- **Destaque Visual para Restrições Alimentares & Remoções**:
+  - Quando um cliente solicita a remoção de um ingrediente (ex: cebola, manjericão, lactose), a comanda da cozinha (`OrderCard.tsx`) exibe um badge visual vermelho com ícone de alerta destacado, prevenindo erros operacionais na esteira de montagem da pizza.
+- **Persistência Reativa do Carrinho**:
+  - A seleção de itens é mantida no `localStorage` do cliente através do store Zustand. O recarregamento acidental de página, perda momentânea de conexão ou navegação entre abas não esvazia o pedido em montagem.
+  - O carrinho só é esvaziado quando o pedido é submetido com sucesso no checkout ou por ação explícita no botão "Esvaziar carrinho".
+- **Acessibilidade Universal**:
+  - O cardápio digital deve ser operável por navegação em teclado, com salto de foco lógico e suporte a leitores de tela para itens, adicionais e preços.
+- **Estruturação de Dados de Cardápio para Motores de Busca**:
+  - O cardápio é mapeado via dados estruturados Schema.org `Menu` com ofertas de preço em BRL para exibição em snippets do Google.
+

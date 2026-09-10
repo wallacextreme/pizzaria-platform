@@ -89,7 +89,7 @@ export function Dialog({
             type="button"
             onClick={onClose}
             aria-label="Fechar janela"
-            className="p-1.5 rounded-lg text-stone-400 hover:text-white hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pizza-terracotta"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-stone-400 hover:text-white hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pizza-terracotta"
           >
             <X className="w-5 h-5" />
           </button>

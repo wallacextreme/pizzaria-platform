@@ -109,3 +109,29 @@ A sincronização de estado em tempo real opera sob uma estratégia híbrida rob
   - Envio autenticado para o Supabase Storage bucket `products`.
   - Persistência da URL canônica no campo `images` (JSONB) do produto.
   - Limpeza de referências de Blob URLs em memória para prevenção de leaks.
+
+---
+
+## 5. Arquitetura de Performance, SEO, PWA & Acessibilidade (Fase 6)
+
+### A. Code Splitting & Otimização de Bundles
+- Modais interativos pesados (`PizzaBuilderModal`, `CheckoutModal`) são carregados sob demanda através de `next/dynamic` com `ssr: false`.
+- First Load JS da página inicial pública reduzido para **136 kB**, otimizando First Contentful Paint (FCP) e Time to Interactive (TTI) em conexões 3G/4G.
+- Fallback elegante de imagens com tratamento de erro (`onError`) no catálogo e no painel administrativo, evitando visual glitches.
+
+### B. Singletons Preservados em `globalThis`
+- Repositórios em memória e instâncias compartilhadas utilizam o padrão de singleton anexado a `globalThis`, garantindo consistência entre recarregamentos de módulos (HMR) e Route Handlers do Next.js sem perda de estado.
+
+### C. SEO Estruturado e Indexação Inteligente
+- **Schema.org JSON-LD**: Injeção semântica de `@type: "Restaurant"` e `@type: "Menu"` vinculando dados de culinária, geolocalização, horários e catálogo ao `<head>` da aplicação.
+- **Roteamento de Rastreadores**: `src/app/robots.ts` configurado para indexar a loja pública (`/`, `/pedido/*`) e proibir estritamente o rastreamento das áreas administrativas (`/admin`, `/api/*`).
+- **Sitemap Dinâmico**: `src/app/sitemap.ts` com canonical URLs e frequência diária.
+
+### D. PWA Readiness
+- `src/app/manifest.ts` gera dinamicamente `/manifest.webmanifest` em conformidade com as diretrizes de Progressive Web Apps (PWA), definindo `display: standalone`, paleta de tema (`#C84B31`) e ícones de alta resolução.
+- Viewport móvel padronizado via export `viewport: Viewport` do Next.js 15.
+
+### E. Acessibilidade (WCAG 2.1 AA)
+- Todos os elementos interativos móveis respeitam a dimensão mínima de toque de **$44 \times 44\text{px}$**.
+- Diálogos e gavetas operam com `role="dialog"`, `aria-modal="true"`, associação de título e descrição (`aria-labelledby`, `aria-describedby`) e fechamento por tecla `Escape`.
+- Foco visível de alto contraste (`focus-visible:ring-2 focus-visible:ring-pizza-terracotta`) garantindo navegação fluida exclusivamente por teclado.

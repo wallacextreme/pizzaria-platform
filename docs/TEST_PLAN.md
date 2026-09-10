@@ -112,14 +112,26 @@ Utilizamos **Vitest** como framework de testes nativo para TypeScript e React Te
 
 ---
 
+### E. SEO, PWA e Estados de UI (Fase 6 - 5 novos testes):
+- **SEO & Indexação** (`seo.test.ts` - 4 testes):
+  - Geração de `robots.txt` com permissão para rotas públicas e bloqueio estrito para `/admin` e `/api/*`.
+  - Geração de `sitemap.xml` com prioridade máxima na raiz e frequência diária.
+  - Exportação de `viewport` com `themeColor: #C84B31` e dimensionamento responsivo.
+  - Metadados completos Open Graph, Twitter Cards e dados estruturados Schema.org (`Restaurant`, `Menu`).
+- **Manifesto PWA** (`manifest.test.ts` - 1 teste):
+  - Configuração do manifesto Web (`name`, `short_name`, `display: standalone`, `background_color`, `theme_color`).
+  - Mapeamento de ícones PWA para tela inicial e instalação mobile.
+
+---
+
 ## 4. Matriz de Execução de Testes nos Quality Gates
 
 | Fase | Testes Obrigatórios | Total de Testes | Critério de Sucesso |
-| :--- | :--- | :--- | :--- |
+| :--- | :--- | :---: | :---: |
 | **Fase 0** | Smoke test de setup, tipos e contratos | 5 | 100% PASS |
 | **Fase 1** | Componentes base e motor de horários | 28 | 100% PASS |
 | **Fase 2** | Motor de preços, carrinho, catálogo e construtor | 57 | 100% PASS |
 | **Fase 3** | Recálculo de checkout, ViaCEP fallback e anti-tampering | 69 | 100% PASS |
 | **Fase 4** | Permissões RLS, Auth RBAC, Storage policies e WebP | 92 | 100% PASS |
-| **Fase 5** | Painel Admin, Realtime, Polling, Transições, Métricas e Áudio | **144** | **100% PASS** |
-| **Fase 6** | Regressão Global completa + Acessibilidade + Build | A definir | 100% PASS |
+| **Fase 5** | Painel Admin, Realtime, Polling, Transições, Métricas e Áudio | 144 | 100% PASS |
+| **Fase 6** | Regressão Global + SEO + PWA + UI States + WCAG 2.1 AA + E2E | **149** | **100% PASS** |

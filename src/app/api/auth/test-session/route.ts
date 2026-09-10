@@ -4,6 +4,24 @@ import { NextResponse } from "next/server";
  * Endpoint de Controle de Sessão Estritamente para Testes Automatizados E2E / Browser
  * DESABILITADO EM PRODUÇÃO (NODE_ENV === "production").
  */
+export async function GET(request: Request) {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const role = searchParams.get("role") === "staff" ? "staff" : "admin";
+
+  const response = NextResponse.json({ success: true, role });
+  response.cookies.set("sb-test-session", role, {
+    path: "/",
+    httpOnly: false,
+    sameSite: "lax",
+  });
+
+  return response;
+}
+
 export async function POST(request: Request) {
   if (process.env.NODE_ENV === "production") {
     return NextResponse.json({ error: "Not found" }, { status: 404 });

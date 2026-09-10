@@ -47,16 +47,25 @@ SUPABASE_SERVICE_ROLE_KEY=sua-chave-service-role
 
 ### 3. Executar Testes Automatizados
 ```bash
-bun test
-# ou
-bun run test
+npm test
 ```
 
-### 4. Executar Servidor de Desenvolvimento
+### 4. Checagens de Tipos e Linter
 ```bash
-bun run dev
+npm run typecheck
+npm run lint
 ```
-Acesse `http://localhost:3000`.
+
+### 5. Compilar para Produção
+```bash
+npm run build
+```
+
+### 6. Executar Servidor Local
+```bash
+npm run dev
+```
+Acesse `http://localhost:3000` para a loja pública e `http://localhost:3000/admin` para o painel operacional.
 
 ---
 

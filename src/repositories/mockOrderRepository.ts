@@ -67,5 +67,14 @@ export class MockOrderRepository implements IOrderRepository {
   }
 }
 
-// Instância compartilhada em memória para Next.js Route Handlers
-export const globalOrderRepository = new MockOrderRepository();
+// Instância compartilhada em memória com preservação em globalThis (padrão Next.js)
+const globalForOrders = globalThis as unknown as {
+  globalOrderRepository?: MockOrderRepository;
+};
+
+export const globalOrderRepository =
+  globalForOrders.globalOrderRepository ?? new MockOrderRepository();
+
+if (process.env.NODE_ENV !== "production") {
+  globalForOrders.globalOrderRepository = globalOrderRepository;
+}

@@ -77,3 +77,16 @@ $$;
 - **Client-Side Canvas Sanitization**: Ao carregar a imagem no elemento Canvas, converter para WebP e redesenhar os pixels, qualquer payload oculto em EXIF, metadados JPEG ou scripts embutidos é neutralizado.
 - **Validação de MIME Type e Tamanho**: Rejeição imediata de arquivos que não sejam `image/png`, `image/jpeg` ou `image/webp`, com limite de 10MB antes da conversão.
 - **Storage Policies no Supabase**: Upload para o bucket `products` permitido apenas para usuários com função `is_admin()`.
+
+---
+
+## 6. Auditoria de Segurança Final & Produção (Fase 6)
+- **Desativação Estrita de Mecanismos de Teste**:
+  - O endpoint `/api/auth/test-session` está condicionado a `process.env.NODE_ENV !== "production"`. Em ambiente de produção, retorna imediatamente HTTP 404, impossibilitando qualquer tentativa de injeção de sessão simulada.
+- **Prevenção de Indexação Indevida de Rotas Administrativas**:
+  - `src/app/robots.ts` define explicitamente regras `Disallow` para `/admin`, `/admin/*` e `/api/*`, impedindo que rastreadores de motores de busca (Googlebot, Bingbot) indexem dados internos da cozinha.
+- **Isolamento de Dados de Pedidos**:
+  - A listagem geral de pedidos (`GET /api/orders`) exige autenticação de `staff` ou `admin`.
+  - Consultas individuais para rastreamento de clientes (`GET /api/orders?id=...`) exigem o UUID ou o identificador exato, prevenindo enumeração de pedidos por terceiros.
+- **Zero Segredos no Repositório**:
+  - Nenhuma chave real ou credencial de produção está registrada no histórico do Git. A implantação requer injeção das variáveis oficiais de ambiente no servidor conforme detalhado em `docs/RELEASE_CHECKLIST.md`.

@@ -66,7 +66,7 @@ export function Header({ cartItemCount = 0, onOpenCart }: HeaderProps) {
               variant="primary"
               size="md"
               onClick={onOpenCart}
-              className="relative px-4"
+              className="relative px-4 min-h-[44px]"
               aria-label={`Carrinho com ${cartItemCount} itens`}
             >
               <ShoppingBag className="w-4 h-4" />
@@ -83,7 +83,7 @@ export function Header({ cartItemCount = 0, onOpenCart }: HeaderProps) {
               type="button"
               onClick={() => setIsMobileMenuOpen(true)}
               aria-label="Abrir menu de navegação"
-              className="md:hidden p-2 rounded-xl text-stone-300 hover:text-white hover:bg-white/5 border border-pizza-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pizza-terracotta"
+              className="md:hidden min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-stone-300 hover:text-white hover:bg-white/5 border border-pizza-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pizza-terracotta"
             >
               <Menu className="w-6 h-6" />
             </button>

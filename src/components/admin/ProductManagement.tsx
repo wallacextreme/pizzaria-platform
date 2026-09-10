@@ -289,13 +289,19 @@ export function ProductManagement({
                 className="py-3 flex items-center justify-between gap-4 transition-colors hover:bg-white/[0.02] px-2 rounded-xl"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center overflow-hidden shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={product.images[0] || "/placeholder-pizza.jpg"}
-                      alt={product.name}
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center overflow-hidden shrink-0 relative text-lg select-none">
+                    <span>{product.flags.is_pizza ? "🍕" : "🥤"}</span>
+                    {product.images[0] && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={product.images[0]}
+                        alt={product.name}
+                        onError={(e) => {
+                          (e.currentTarget as HTMLElement).style.display = "none";
+                        }}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    )}
                   </div>
                   <div>
                     <p className={`text-xs font-bold ${product.is_active ? "text-pizza-cream" : "text-stone-500 line-through"}`}>

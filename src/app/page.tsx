@@ -7,10 +7,19 @@ import { Header } from "@/components/layout/Header";
 import { HeroBanner } from "@/components/layout/HeroBanner";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Footer } from "@/components/layout/Footer";
+import dynamic from "next/dynamic";
 import { CatalogSection } from "@/components/catalog/CatalogSection";
-import { PizzaBuilderModal } from "@/components/builder/PizzaBuilderModal";
 import { CartDrawer } from "@/components/cart/CartDrawer";
-import { CheckoutModal } from "@/components/checkout/CheckoutModal";
+
+const PizzaBuilderModal = dynamic(
+  () => import("@/components/builder/PizzaBuilderModal").then((mod) => mod.PizzaBuilderModal),
+  { ssr: false }
+);
+
+const CheckoutModal = dynamic(
+  () => import("@/components/checkout/CheckoutModal").then((mod) => mod.CheckoutModal),
+  { ssr: false }
+);
 import { useCartStore } from "@/store/cartStore";
 import { MOCK_STORE_SETTINGS, MOCK_CATEGORIES, MOCK_PRODUCTS } from "@/lib/mockData";
 import type { Product, OrderItem } from "@/types/domain";

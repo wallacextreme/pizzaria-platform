@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C84B31" />
+      <stop offset="100%" stop-color="#9B3822" />
+    </linearGradient>
+    <linearGradient id="crust" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#D9B48F" />
+      <stop offset="100%" stop-color="#B88A58" />
+    </linearGradient>
+  </defs>
+  <!-- Background Rounded -->
+  <rect width="512" height="512" rx="128" fill="#181514" />
+  <!-- Flame Aura -->
+  <circle cx="256" cy="256" r="190" fill="url(#bg)" />
+  <!-- Crust Slice -->
+  <path d="M256 100 L390 380 Q256 420 122 380 Z" fill="url(#crust)" />
+  <!-- Sauce & Cheese -->
+  <path d="M256 130 L365 365 Q256 400 147 365 Z" fill="#F4E0A5" />
+  <!-- Pepperonis / Tomatoes -->
+  <circle cx="256" cy="220" r="28" fill="#B91C1C" />
+  <circle cx="210" cy="300" r="24" fill="#B91C1C" />
+  <circle cx="300" cy="310" r="25" fill="#B91C1C" />
+  <!-- Basil Leaves -->
+  <path d="M230 180 C230 160 250 170 250 180 C250 190 230 195 230 180 Z" fill="#15803D" />
+  <path d="M280 250 C280 235 295 240 295 250 C295 260 280 265 280 250 Z" fill="#15803D" />
+</svg>

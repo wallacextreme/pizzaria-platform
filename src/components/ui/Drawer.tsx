@@ -22,6 +22,7 @@ export function Drawer({
   className,
 }: DrawerProps) {
   const titleId = React.useId();
+  const descId = React.useId();
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -46,6 +47,7 @@ export function Drawer({
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
+      aria-describedby={description ? descId : undefined}
       className="fixed inset-0 z-50 flex"
     >
       {/* Backdrop */}
@@ -73,14 +75,16 @@ export function Drawer({
               {title}
             </h2>
             {description && (
-              <p className="text-xs text-stone-400 mt-0.5">{description}</p>
+              <p id={descId} className="text-xs text-stone-400 mt-0.5">
+                {description}
+              </p>
             )}
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Fechar painel"
-            className="p-1.5 rounded-lg text-stone-400 hover:text-white hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pizza-terracotta"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-stone-400 hover:text-white hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pizza-terracotta"
           >
             <X className="w-5 h-5" />
           </button>
