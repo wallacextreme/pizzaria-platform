@@ -80,17 +80,21 @@ A plataforma é projetada sob os princípios de alta coesão, baixo acoplamento,
 
 ---
 
-## 3. Estratégia de Realtime e Sincronização
+## 3. Estratégia de Realtime, Polling e Reconciliação Determinística
 
-A sincronização de estado em tempo real opera em três canais principais:
+A sincronização de estado em tempo real opera sob uma estratégia híbrida robusta e determinística:
 
-1. **Canal `orders-channel`**:
-   - **INSERT**: Dispara novo pedido para o Painel Administrativo. Ativa o sintetizador sonoro (Web Audio API) e insere o card na coluna `Novo` do Kanban.
-   - **UPDATE**: Atualiza a coluna de status no Kanban e sincroniza a tela do cliente (`/pedido/[id]`) sem necessidade de recarregar a página.
-2. **Canal `products-channel`**:
-   - **UPDATE**: Dispara atualização de disponibilidade quando um item for pausado ou esgotado pelo admin, atualizando a visualização do cardápio para os clientes instantaneamente.
-3. **Canal `store-settings-channel`**:
-   - **UPDATE**: Notifica alterações no status operacional (abertura/fechamento manual da loja) instantaneamente no header e banner dos clientes conectados.
+1. **Supabase Realtime como Mecanismo Principal de Baixa Latência**:
+   - Canal `admin-orders-realtime` escutando eventos de `postgres_changes` na tabela `orders`.
+   - **INSERT**: Insere imediatamente o novo pedido no topo da coluna `Novo` do Kanban e dispara o sintetizador sonoro (Web Audio API).
+   - **UPDATE**: Atualiza a coluna de status do pedido de forma reativa e instantânea.
+2. **Polling de 10 Segundos como Fallback / Resync**:
+   - Atua estritamente como rede de segurança para ambientes com oscilação de WebSocket ou pacotes perdidos.
+   - Consulta periódica a `/api/orders` garantindo convergência de estado mesmo sob instabilidades de rede móvel na cozinha.
+3. **Reconciliação e Deduplicação Determinística (`orderReconciliation.ts`)**:
+   - **Chave de Unicidade**: Todo pedido é indexado unicamente pelo seu `id` (UUID).
+   - **Resolução de Conflitos por Timestamp**: Cada atualização compara `incoming.updated_at >= existing.updated_at`. Se um evento Realtime mais novo já tiver sido processado, qualquer resposta atrasada do polling é sumariamente DESCARTADA, eliminando reversões de status ou race conditions.
+   - **Idempotência**: O processamento repetido do mesmo evento Realtime ou resposta de polling produz exatamente o mesmo estado final estável, sem duplicação de pedidos no Kanban.
 
 ---
 

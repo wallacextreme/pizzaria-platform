@@ -86,9 +86,9 @@ CREATE POLICY "Público pode criar pedidos validados"
 ON public.orders FOR INSERT
 WITH CHECK (true);
 
-CREATE POLICY "Leitura de pedidos para staff ou por id específico"
+CREATE POLICY "Leitura de pedidos apenas para staff ou admin"
 ON public.orders FOR SELECT
-USING (public.is_staff_or_admin(auth.uid()) OR true);
+USING (public.is_staff_or_admin(auth.uid()));
 
 CREATE POLICY "Staff ou admin pode atualizar status do pedido"
 ON public.orders FOR UPDATE

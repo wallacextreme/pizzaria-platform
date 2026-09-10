@@ -64,3 +64,30 @@ Este documento registra formalmente as decisões arquiteturais tomadas para gara
 - **Contexto**: Alertas de pedidos novos precisam ser confiáveis, discretos e não falhar por arquivos de áudio não carregados ou bloqueados por CORS.
 - **Decisão**: Implementar um sintetizador simples com oscilador e envelope de ganho usando a Web Audio API nativa do navegador para emitir um tom curto e agradável.
 - **Consequências**: Zero dependência de arquivos MP3/WAV externos, sem latência de rede.
+
+---
+
+## ADR 008: Estratégia Híbrida Realtime + Polling com Reconciliação Determinística
+- **Data**: 2026-09-10
+- **Status**: Aprovado
+- **Contexto**: O painel da cozinha depende de eventos imediatos para novos pedidos, mas conexões de rede em cozinhas industriais podem sofrer oscilações momentâneas ou quedas de WebSocket. Simples polling de 10s pode competir com Realtime e gerar duplicação de pedidos ou sobrescrita de estados mais novos com dados obsoletos (race conditions).
+- **Decisão**: Adotar Supabase Realtime como canal primário de baixa latência e Polling de 10 segundos estritamente como mecanismo de resync e fallback. Implementar a função determinística `reconcileOrders()` que indexa pedidos por UUID e descarta sumariamente qualquer payload de polling cuja data `updated_at` seja anterior ao estado atual da aplicação.
+- **Consequências**: Zero duplicação de cards, eliminação de race conditions e garantia de convergência estável mesmo sob reconexões frequentes.
+
+---
+
+## ADR 009: Defesa em Profundidade para Autenticação e RBAC sem Bypasses
+- **Data**: 2026-09-10
+- **Status**: Aprovado
+- **Contexto**: Painéis operacionais não podem tolerar botões de atalho ou simulações que permitam acesso não autenticado, nem confiar exclusivamente em guards de interface (client-side).
+- **Decisão**: Remover qualquer mecanismo de mock/bypass do código de produção. Implementar autenticação real via Supabase Auth integrada à tabela `user_roles`. Estabelecer três níveis de barreira: Client Route Guard (`admin/layout.tsx`), Server Guard (`serverAuth.ts`) em todos os Route Handlers administrativos e políticas estritas de RLS no PostgreSQL (com `public.is_staff_or_admin`).
+- **Consequências**: Qualquer requisição não autenticada ou sem perfil atribuído em `user_roles` é rejeitada imediatamente com 401 ou 403, tanto na interface quanto nas APIs.
+
+---
+
+## ADR 010: Máquina de Estados Estrita para o Fluxo de Pedidos
+- **Data**: 2026-09-10
+- **Status**: Aprovado
+- **Contexto**: Mudanças arbitrárias de status de pedidos (como pular etapas da cozinha ou regredir pedidos já entregues) causam erros operacionais graves na linha de produção da pizzaria.
+- **Decisão**: Definir formalmente a máquina de estados `orderTransitions.ts` com validação obrigatória no servidor (`PATCH /api/orders`). O fluxo é estritamente unidirecional: `novo` → `em_preparo` → `no_forno` → `saiu_para_entrega` → `concluido`. Cancelamento é permitido apenas antes da conclusão. Pedidos `concluido` e `cancelado` são imutáveis.
+- **Consequências**: Eliminação de estados arbitrários e consistência total entre tela da cozinha, backend e rastreamento do cliente.

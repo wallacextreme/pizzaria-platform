@@ -81,6 +81,35 @@ Utilizamos **Vitest** como framework de testes nativo para TypeScript e React Te
 - Renderização do modal com tamanhos, fatias e preços base.
 - Adição com sucesso ao estado persistente do carrinho.
 
+### D. Painel Administrativo, Kanban, Realtime e RBAC (Fase 5 - 41 novos testes):
+- **Transições de Status** (`orderTransitions.test.ts` - 10 testes):
+  - Fluxo sequencial completo (`novo` → `em_preparo` → `no_forno` → `saiu_para_entrega` → `concluido`).
+  - Cancelamento permitido em estados ativos e rejeição após conclusão.
+  - Rejeição de saltos de etapas, regresso de status e reabertura de cancelados.
+- **Métricas Operacionais** (`metrics.test.ts` - 6 testes):
+  - Faturamento, total de pedidos, pedidos em andamento e ticket médio em centavos inteiros.
+  - Exclusão estrita de pedidos cancelados.
+  - Filtragem por data civil (`isSameCivilDay`).
+- **Reconciliação Determinística** (`orderReconciliation.test.ts` - 6 testes):
+  - Deduplicação de pedidos e ordenação por data.
+  - Resolução de conflitos por `updated_at`.
+  - Descarte de payloads obsoletos de polling para eliminar race conditions.
+  - Idempotência de eventos Realtime duplicados.
+- **Autorização e Server Guards** (`serverAuth.test.ts` e `adminApi.test.ts` - 14 testes):
+  - Bloqueio de requisições não autenticadas (401).
+  - Bloqueio de usuários sem registro em `user_roles` (403).
+  - Bloqueio de usuários `staff` em endpoints exclusivos de `admin` (403).
+  - Acesso concedido para `admin` (acesso total) e `staff` (Kanban e status).
+  - Validação de PATCH de produtos e override da loja via API.
+- **Sintetizador de Áudio** (`audioNotifier.test.ts` - 6 testes):
+  - Controle de mute e volume com persistência no localStorage.
+  - Resiliência contra bloqueios de autoplay do navegador sem quebrar a aplicação.
+  - Desbloqueio seguro de AudioContext suspenso.
+- **Componentes Administrativos** (`admin.test.tsx` - 9 testes):
+  - Autenticação real com Supabase Auth e verificação de perfil `user_roles`.
+  - Exibição de todos os campos obrigatórios no card e modal de comanda completa.
+  - Destaque visual inequívoco para ingredientes removidos.
+
 ---
 
 ## 4. Matriz de Execução de Testes nos Quality Gates
@@ -90,7 +119,7 @@ Utilizamos **Vitest** como framework de testes nativo para TypeScript e React Te
 | **Fase 0** | Smoke test de setup, tipos e contratos | 5 | 100% PASS |
 | **Fase 1** | Componentes base e motor de horários | 28 | 100% PASS |
 | **Fase 2** | Motor de preços, carrinho, catálogo e construtor | 57 | 100% PASS |
-| **Fase 3** | Recálculo de checkout, ViaCEP fallback e anti-tampering | A definir | 100% PASS |
-| **Fase 4** | Permissões RLS, Auth RBAC e Storage policies | A definir | 100% PASS |
-| **Fase 5** | Sincronização Realtime e transições do Kanban | A definir | 100% PASS |
+| **Fase 3** | Recálculo de checkout, ViaCEP fallback e anti-tampering | 69 | 100% PASS |
+| **Fase 4** | Permissões RLS, Auth RBAC, Storage policies e WebP | 92 | 100% PASS |
+| **Fase 5** | Painel Admin, Realtime, Polling, Transições, Métricas e Áudio | **144** | **100% PASS** |
 | **Fase 6** | Regressão Global completa + Acessibilidade + Build | A definir | 100% PASS |

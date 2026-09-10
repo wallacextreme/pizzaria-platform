@@ -81,3 +81,40 @@ Para o dia da semana atual (`0 = Domingo`, ..., `6 = Sábado`):
 3. Se nenhum intervalo corresponder, a loja está fechada.
 
 Quando a loja estiver fechada, novos pedidos pela web são bloqueados ou sinalizados como agendamento/fechado conforme configuração.
+
+---
+
+## 7. Máquina de Estados e Transições de Pedidos (Kanban)
+
+O ciclo de vida do pedido é estritamente controlado pelo backend (`orderTransitions.ts`):
+- `novo` → `em_preparo`
+- `em_preparo` → `no_forno`
+- `no_forno` → `saiu_para_entrega`
+- `saiu_para_entrega` → `concluido`
+
+### Regras de Cancelamento:
+- Cancelamento (`cancelado`) é permitido a partir dos status: `novo`, `em_preparo`, `no_forno` e `saiu_para_entrega`.
+- Pedidos com status `concluido` são imutáveis e jamais podem ser cancelados ou regredidos.
+- Pedidos com status `cancelado` são imutáveis e jamais podem ser reabertos.
+- Qualquer tentativa de pular etapas (ex: `novo` → `concluido`) ou regredir arbitrariamente (ex: `saiu_para_entrega` → `novo`) é rejeitada com código HTTP `400 Bad Request`.
+
+---
+
+## 8. Definição Única de Negócio para Métricas do Dashboard (`metrics.ts`)
+
+Todas as métricas operacionais compartilham uma única fórmula e fonte de verdade:
+- **Faturamento do Dia**: Somatório de `total_cents` de todos os pedidos criados na data civil de referência cujo status seja DIFERENTE de `cancelado`.
+- **Pedidos do Dia**: Contagem de pedidos válidos do dia de referência (`status != 'cancelado'`).
+- **Pedidos em Andamento**: Contagem de pedidos ativos em produção ou rota cujo status pertença a `['novo', 'em_preparo', 'no_forno', 'saiu_para_entrega']`.
+- **Ticket Médio**: Divisão inteira `faturamento_do_dia / pedidos_do_dia` (em centavos inteiros arredondados). Se zero pedidos, retorna `0`.
+
+---
+
+## 9. Disponibilidade e Pausa de Produtos
+
+- Quando um produto tem seu status alterado para pausado (`is_active = false`) pelo administrador via `/api/products`:
+  1. A alteração persiste imediatamente no banco de dados.
+  2. A vitrine pública reflete o item indisponível/desabilitado.
+  3. Carrinhos de compras existentes mantêm o item sem quebrar a interface do cliente.
+  4. Na tentativa de checkout posterior, o motor de validação (`orderValidator.ts`) rejeita a criação do pedido informando amigavelmente que o produto foi pausado e não está mais disponível.
+

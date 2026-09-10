@@ -26,8 +26,8 @@ export function AdminHeader({ activeTab, onTabChange }: AdminHeaderProps) {
   const { user, logout } = useAdminAuthStore();
   const [isMuted, setIsMuted] = React.useState(audioNotifier.getIsMuted());
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     router.push("/admin/login");
   };
 

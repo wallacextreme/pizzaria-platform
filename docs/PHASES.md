@@ -57,15 +57,17 @@ Construção estritamente incremental. Nenhuma fase é iniciada sem a aprovaçã
 ## FASE 5 — PAINEL ADMINISTRATIVO & KANBAN EM TEMPO REAL
 - **Status**: CONCLUÍDA E APROVADA (Gate F5: PASS)
 - **Entregáveis Concluídos**:
-  - Autenticação com sessão protegida e Route Guards (`adminAuthStore.ts` e `/admin/login`).
-  - Painel Operacional com 4 Cards de Métricas em tempo real (`MetricsCards.tsx`).
-  - Quadro Kanban de Cozinha com 5 colunas de status (`KanbanBoard.tsx`).
-  - Card de Pedido gastronômico com destaque para ingredientes removidos, tempo decorrido e avanço de status (`OrderCard.tsx`).
-  - Endpoint de atualização de status de pedidos (`PATCH /api/orders`).
-  - Alerta sonoro sintetizado nativo via Web Audio API (`audioNotifier.ts`).
-  - Painel de Operação & Loja com controle manual de funcionamento e pausa de produtos (`ProductManagement.tsx`).
-  - 103 testes automatizados passando (15 suítes no Vitest).
-- **Quality Gate F5**: PASS (Build OK, Types OK, Lint OK, Testes OK, UX/Kanban OK, Audio OK).
+  - Autenticação com Supabase Auth e verificação de perfil estrito na tabela `user_roles` (`adminAuthStore.ts` e `/admin/login`).
+  - Eliminação total de bypasses, credenciais de simulação e mock logins no código de produção.
+  - Route Guards em múltiplas camadas: Client (`admin/layout.tsx`), Server (`serverAuth.ts`) e Database RLS (`002_rls_policies.sql`).
+  - Quadro Kanban com 5 colunas operacionais e máquina de estados estrita (`orderTransitions.ts` e `PATCH /api/orders`).
+  - Visualização completa de pedidos com 19 campos obrigatórios, destaque visual inequívoco para ingredientes removidos e modal de comanda detalhada (`OrderCard.tsx`).
+  - Sincronização híbrida: Supabase Realtime como canal primário, polling de 10s como fallback e reconciliação determinística (`orderReconciliation.ts`).
+  - Métricas operacionais com definição única de negócio (`metrics.ts` e `MetricsCards.tsx`).
+  - Sintetizador sonoro nativo via Web Audio API com controle de volume, mute e tratamento resiliente de autoplay (`audioNotifier.ts`).
+  - Painel de Operação com persistência no backend de pausas de produto (`/api/products`) e override de funcionamento da loja (`/api/store/status`).
+  - 144 testes automatizados passando (20 suítes completas no Vitest).
+- **Quality Gate F5**: PASS (Build OK, Types OK, Lint OK, 144 Testes OK, UX/Kanban OK, Audio OK, RLS/RBAC OK).
 
 ---
 

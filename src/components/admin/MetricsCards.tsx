@@ -3,6 +3,7 @@
 import * as React from "react";
 import type { Order } from "@/types/domain";
 import { formatCurrency } from "@/domain/currency";
+import { calculateDailyMetrics } from "@/domain/metrics";
 import { Card, CardContent } from "@/components/ui/Card";
 import { DollarSign, ShoppingBag, Flame, TrendingUp } from "lucide-react";
 
@@ -11,22 +12,9 @@ interface MetricsCardsProps {
 }
 
 export function MetricsCards({ orders }: MetricsCardsProps) {
+  // Utiliza a fonte única de verdade do domínio para métricas
   const metrics = React.useMemo(() => {
-    const validOrders = orders.filter((o) => o.status !== "cancelado");
-    const totalRevenueCents = validOrders.reduce((sum, o) => sum + o.total_cents, 0);
-    const inKitchenCount = orders.filter((o) =>
-      ["novo", "em_preparo", "no_forno"].includes(o.status)
-    ).length;
-    const averageTicketCents =
-      validOrders.length > 0 ? Math.round(totalRevenueCents / validOrders.length) : 0;
-
-    return {
-      totalRevenueCents,
-      ordersCount: orders.length,
-      validOrdersCount: validOrders.length,
-      inKitchenCount,
-      averageTicketCents,
-    };
+    return calculateDailyMetrics(orders);
   }, [orders]);
 
   return (
@@ -41,25 +29,25 @@ export function MetricsCards({ orders }: MetricsCardsProps) {
             </div>
           </div>
           <p className="text-xl sm:text-2xl font-black text-emerald-400">
-            {formatCurrency(metrics.totalRevenueCents)}
+            {formatCurrency(metrics.revenueOfDayCents)}
           </p>
           <p className="text-[10px] text-stone-500">
-            {metrics.validOrdersCount} pedidos faturados
+            {metrics.ordersOfDayCount} pedidos faturados
           </p>
         </CardContent>
       </Card>
 
-      {/* 2. Total de Pedidos */}
+      {/* 2. Total de Pedidos do Dia */}
       <Card className="bg-pizza-charcoal-card border-pizza-border p-4">
         <CardContent className="p-0 space-y-1">
           <div className="flex items-center justify-between text-stone-400">
-            <span className="text-[11px] uppercase font-bold tracking-wider">Total Pedidos</span>
+            <span className="text-[11px] uppercase font-bold tracking-wider">Pedidos do Dia</span>
             <div className="p-1.5 rounded-lg bg-pizza-terracotta/20 text-pizza-terracotta border border-pizza-terracotta/30">
               <ShoppingBag className="w-4 h-4" />
             </div>
           </div>
           <p className="text-xl sm:text-2xl font-black text-pizza-cream">
-            {metrics.ordersCount}
+            {metrics.ordersOfDayCount}
           </p>
           <p className="text-[10px] text-stone-500">
             Recebidos no turno de hoje
@@ -67,20 +55,20 @@ export function MetricsCards({ orders }: MetricsCardsProps) {
         </CardContent>
       </Card>
 
-      {/* 3. Em Produção na Cozinha */}
+      {/* 3. Pedidos em Andamento */}
       <Card className="bg-pizza-charcoal-card border-pizza-border p-4">
         <CardContent className="p-0 space-y-1">
           <div className="flex items-center justify-between text-stone-400">
-            <span className="text-[11px] uppercase font-bold tracking-wider">Na Cozinha</span>
+            <span className="text-[11px] uppercase font-bold tracking-wider">Em Andamento</span>
             <div className="p-1.5 rounded-lg bg-pizza-gold/20 text-pizza-gold border border-pizza-gold/30">
               <Flame className="w-4 h-4" />
             </div>
           </div>
           <p className="text-xl sm:text-2xl font-black text-pizza-gold">
-            {metrics.inKitchenCount}
+            {metrics.inProgressCount}
           </p>
           <p className="text-[10px] text-stone-500">
-            Novos, preparando ou no forno
+            Novos, preparando, forno ou rota
           </p>
         </CardContent>
       </Card>
@@ -98,7 +86,7 @@ export function MetricsCards({ orders }: MetricsCardsProps) {
             {formatCurrency(metrics.averageTicketCents)}
           </p>
           <p className="text-[10px] text-stone-500">
-            Média por pedido concluído
+            Média por pedido faturado
           </p>
         </CardContent>
       </Card>

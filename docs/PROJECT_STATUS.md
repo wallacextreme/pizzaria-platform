@@ -86,18 +86,43 @@
 
 ---
 
-## 4. Checklist do Gate F5 (Critérios de Aceite Validados)
+## 4. Checklist do Gate F5 (Critérios de Aceite Validados — Revisão Rigorosa)
 
-- [x] Autenticação e Route Guards Administrativos (`src/store/adminAuthStore.ts` & `src/app/admin/login/page.tsx`):
-  - Gerenciamento de sessão com persistência no localStorage e hidratação segura (`_hasHydrated`).
-  - Proteção de rotas em `/admin` redirecionando para `/admin/login` caso não autenticado.
-  - Tela de login com atalhos de acesso rápido para Gerente (Admin) e Cozinha (Staff).
-- [x] Métricas Operacionais em Tempo Real (`src/components/admin/MetricsCards.tsx`):
-  - Cálculo exato em centavos inteiros (`cents`) para Faturamento do Dia, Total de Pedidos, Pedidos em Cozinha e Ticket Médio.
-- [x] Quadro Kanban de Cozinha em Tempo Real (`src/components/admin/KanbanBoard.tsx` & `OrderCard.tsx`):
-  - 5 Colunas de fluxo operacional: `Novos Pedidos`, `Em Preparo`, `No Forno`, `A Caminho / Despachado` e `Concluídos`.
-  - Destaque em vermelho de alto contraste para **ingredientes removidos** (`SEM CEBOLA`, etc.) facilitando a linha de montagem.
-  - Temporizador visual de tempo decorrido com alertas de atraso (> 20 min atenção, > 40 min atraso).
+- [x] **Autenticação Real & Eliminação de Bypasses** (`src/store/adminAuthStore.ts` & `src/app/admin/login/page.tsx`):
+  - Remoção de qualquer atalho de mock login ou botões de simulação da interface de produção.
+  - Autenticação real via Supabase Auth (`signInWithPassword`) e verificação estrita de papéis na tabela `user_roles`.
+  - Distinção real entre `admin` e `staff`. Rejeição com 403 para usuários autenticados sem papel administrativo atribuído.
+- [x] **Route Guards em Camadas (Defense in Depth)** (`src/app/admin/layout.tsx` & `src/lib/auth/serverAuth.ts`):
+  - Client-side Guard em `admin/layout.tsx` redirecionando usuários sem sessão ativa para `/admin/login`.
+  - Server-side Guard em todos os Route Handlers administrativos (`/api/orders`, `/api/products`, `/api/store/status`).
+  - Hardening de RLS em `public.orders` (remoção do bypass `OR true`, restrito a `public.is_staff_or_admin`).
+- [x] **Realtime + Polling com Reconciliação Determinística** (`src/domain/orderReconciliation.ts` & `src/app/admin/page.tsx`):
+  - Supabase Realtime como canal primário de baixa latência para INSERT e UPDATE.
+  - Polling de 10s como fallback/resync para conexões oscilantes.
+  - Reconciliação pura que descarta payloads obsoletos com base em `updated_at`, prevenindo race conditions e duplicação.
+- [x] **Controle Estrito de Transições do Kanban** (`src/domain/orderTransitions.ts` & `src/app/api/orders/route.ts`):
+  - Máquina de estados unidirecional: `novo` → `em_preparo` → `no_forno` → `saiu_para_entrega` → `concluido`.
+  - Cancelamento permitido apenas antes da conclusão. Pedidos `concluido` e `cancelado` são imutáveis.
+  - Validação mandatória no servidor retornando 400 em caso de tentativas inválidas.
+- [x] **Visualização Completa de Pedidos sem Ambiguidade** (`src/components/admin/OrderCard.tsx`):
+  - Exibição de todos os 19 campos obrigatórios (número, horário, cliente, telefone, modalidade, endereço completo, itens, tamanho, sabores, meio a meio, borda, extras, observações, pagamento, troco, subtotal, taxa, total).
+  - **Destaque visual inequívoco** para ingredientes removidos (badge vermelho com ícone de alerta para a equipe de montagem).
+  - Modal com Comanda Completa detalhada para conferência na cozinha.
+- [x] **Métricas Operacionais Unificadas** (`src/domain/metrics.ts` & `src/components/admin/MetricsCards.tsx`):
+  - Única fonte de verdade com faturamento do dia, pedidos do dia, pedidos em andamento e ticket médio.
+  - Exclusão estrita de cancelados e precisão absoluta em centavos inteiros.
+- [x] **Alerta Sonoro Nativo e Resiliente** (`src/lib/audioNotifier.ts`):
+  - Sintetizador Web Audio API com desbloqueio em gesto do operador.
+  - Controles de mute e volume (slider 0-100%) persistidos em `localStorage`.
+  - Resiliência contra bloqueios de autoplay sem quebras de interface.
+- [x] **Gestão de Produtos e Funcionamento da Loja** (`ProductManagement.tsx`, `/api/products`, `/api/store/status`):
+  - Persistência de pausa/reativação de produtos no backend, integrada à validação de checkout do cliente.
+  - Persistência do override manual da loja (`auto`, `aberto`, `fechado`) consistente com o domínio `storeHours.ts`.
+- [x] **Suíte de Testes Automatizados**: **144/144 testes passando** (20 arquivos no Vitest).
+- [x] **TypeScript**: `tsc --noEmit` validado com **0 erros**.
+- [x] **ESLint**: `next lint` validado com **0 warnings ou erros**.
+- [x] **Build de Produção**: `next build` compilado com sucesso em 16.1s.
+- [x] **Documentação Viva Atualizada**: `ARCHITECTURE.md`, `SECURITY.md`, `BUSINESS_RULES.md`, `DECISIONS.md`, `TEST_PLAN.md`, `PROJECT_STATUS.md`.
   - Botões intuitivos de transição de status para avançar ou reverter etapas.
   - Atualização do status via endpoint `PATCH /api/orders`.
 - [x] Alerta Sonoro Sintetizado via Web Audio API (`src/lib/audioNotifier.ts`):

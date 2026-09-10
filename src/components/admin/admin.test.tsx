@@ -1,12 +1,29 @@
 import * as React from "react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { useAdminAuthStore } from "@/store/adminAuthStore";
 import { OrderCard } from "./OrderCard";
 import { MetricsCards } from "./MetricsCards";
 import { KanbanBoard } from "./KanbanBoard";
 import type { Order } from "@/types/domain";
+
+// Mock do Supabase Client para useAdminAuthStore
+const mockSignInWithPassword = vi.fn();
+const mockSignOut = vi.fn();
+const mockGetSession = vi.fn();
+const mockFrom = vi.fn();
+
+vi.mock("@/lib/supabase/client", () => ({
+  createClient: () => ({
+    auth: {
+      signInWithPassword: mockSignInWithPassword,
+      signOut: mockSignOut,
+      getSession: mockGetSession,
+    },
+    from: mockFrom,
+  }),
+}));
 
 const MOCK_ORDER: Order = {
   id: "ord-test-1",
@@ -47,8 +64,9 @@ const MOCK_ORDER: Order = {
 
 describe("Admin & Kitchen Kanban Test Suite", () => {
   describe("useAdminAuthStore", () => {
-    beforeEach(() => {
-      useAdminAuthStore.getState().logout();
+    beforeEach(async () => {
+      vi.clearAllMocks();
+      await useAdminAuthStore.getState().logout();
     });
 
     it("inicia desautenticado por padrão", () => {
@@ -57,38 +75,102 @@ describe("Admin & Kitchen Kanban Test Suite", () => {
       expect(state.user).toBeNull();
     });
 
-    it("autentica como admin e define papel e nome corretamente", () => {
-      useAdminAuthStore.getState().login("admin@pizzaria.com", "admin", "Gerente Geral");
-      const state = useAdminAuthStore.getState();
+    it("autentica com Supabase Auth e carrega papel admin de user_roles", async () => {
+      mockSignInWithPassword.mockResolvedValue({
+        data: {
+          user: {
+            id: "adm-uuid-1",
+            email: "admin@pizzaria.com",
+            user_metadata: { name: "Gerente Geral" },
+          },
+        },
+        error: null,
+      });
 
+      mockFrom.mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: { role: "admin" },
+          error: null,
+        }),
+      });
+
+      const result = await useAdminAuthStore.getState().login("admin@pizzaria.com", "senha123");
+      expect(result.success).toBe(true);
+
+      const state = useAdminAuthStore.getState();
       expect(state.isAuthenticated).toBe(true);
       expect(state.user?.email).toBe("admin@pizzaria.com");
       expect(state.user?.role).toBe("admin");
       expect(state.user?.name).toBe("Gerente Geral");
     });
 
-    it("desautentica ao chamar logout", () => {
-      useAdminAuthStore.getState().login("staff@pizzaria.com", "staff");
+    it("rejeita login se usuário não possui perfil atribuído em user_roles (RBAC)", async () => {
+      mockSignInWithPassword.mockResolvedValue({
+        data: {
+          user: {
+            id: "user-sem-cargo",
+            email: "invasor@pizzaria.com",
+          },
+        },
+        error: null,
+      });
+
+      mockFrom.mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: null,
+          error: null,
+        }),
+      });
+
+      const result = await useAdminAuthStore.getState().login("invasor@pizzaria.com", "senha123");
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("não possui atribuição de papel administrativo em user_roles");
+
+      const state = useAdminAuthStore.getState();
+      expect(state.isAuthenticated).toBe(false);
+      expect(state.user).toBeNull();
+    });
+
+    it("desautentica ao chamar logout", async () => {
+      mockSignInWithPassword.mockResolvedValue({
+        data: {
+          user: { id: "stf-1", email: "staff@pizzaria.com" },
+        },
+        error: null,
+      });
+      mockFrom.mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: { role: "staff" }, error: null }),
+      });
+
+      await useAdminAuthStore.getState().login("staff@pizzaria.com", "senha123");
       expect(useAdminAuthStore.getState().isAuthenticated).toBe(true);
 
-      useAdminAuthStore.getState().logout();
+      await useAdminAuthStore.getState().logout();
       expect(useAdminAuthStore.getState().isAuthenticated).toBe(false);
       expect(useAdminAuthStore.getState().user).toBeNull();
     });
   });
 
   describe("OrderCard Component", () => {
-    it("renderiza identificador, cliente, valor e ingrediente removido em destaque", () => {
+    it("renderiza identificador, cliente, valor, horário e ingrediente removido em destaque inequívoco", () => {
       const onStatusChange = vi.fn();
       render(<OrderCard order={MOCK_ORDER} onStatusChange={onStatusChange} />);
 
       expect(screen.getByText("#PZ-9999")).toBeDefined();
       expect(screen.getByText("Carlos Eduardo")).toBeDefined();
-      expect(screen.getByText("SEM CEBOLA")).toBeDefined();
+      expect(screen.getByText("SEM cebola")).toBeDefined();
       expect(screen.getByText("Iniciar Preparo")).toBeDefined();
+      expect(screen.getByText("Subtotal: R$ 60,00")).toBeDefined();
+      expect(screen.getByText("R$ 67,00")).toBeDefined();
     });
 
-    it("aciona callback de transição de status ao clicar no botão de avanço", () => {
+    it("aciona callback de transição de status sequencial ao clicar no botão de avanço", () => {
       const onStatusChange = vi.fn();
       render(<OrderCard order={MOCK_ORDER} onStatusChange={onStatusChange} />);
 
@@ -97,12 +179,25 @@ describe("Admin & Kitchen Kanban Test Suite", () => {
 
       expect(onStatusChange).toHaveBeenCalledWith("ord-test-1", "em_preparo");
     });
+
+    it("abre modal com comanda completa e detalhada ao clicar em Comanda", async () => {
+      const onStatusChange = vi.fn();
+      render(<OrderCard order={MOCK_ORDER} onStatusChange={onStatusChange} />);
+
+      const comandaBtn = screen.getByText("Comanda");
+      fireEvent.click(comandaBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText("Comanda Completa — #PZ-9999")).toBeDefined();
+        expect(screen.getByText("Atenção Equipe de Montagem:")).toBeDefined();
+      });
+    });
   });
 
   describe("MetricsCards Component", () => {
-    it("calcula faturamento, pedidos e itens em cozinha com precisão a partir de centavos", () => {
+    it("calcula faturamento, pedidos e itens em andamento com precisão a partir de centavos do domínio", () => {
       const orders: Order[] = [
-        MOCK_ORDER, // total_cents: 6700, status: novo (em cozinha)
+        MOCK_ORDER, // total_cents: 6700, status: novo (em andamento)
         {
           ...MOCK_ORDER,
           id: "ord-test-2",
@@ -115,9 +210,9 @@ describe("Admin & Kitchen Kanban Test Suite", () => {
 
       // Faturamento total: 6700 + 8000 = 14700 cents = R$ 147,00
       expect(screen.getByText("R$ 147,00")).toBeDefined();
-      // Total de pedidos: 2
+      // Total de pedidos válidos: 2
       expect(screen.getByText("2")).toBeDefined();
-      // Em cozinha (apenas 'novo'): 1
+      // Em andamento (apenas 'novo'): 1
       expect(screen.getByText("1")).toBeDefined();
       // Ticket médio: 14700 / 2 = 7350 cents = R$ 73,50
       expect(screen.getByText("R$ 73,50")).toBeDefined();

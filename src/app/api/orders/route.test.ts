@@ -1,7 +1,14 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { POST, GET, PATCH } from "./route";
 
 import { globalOrderRepository } from "@/repositories/mockOrderRepository";
+
+vi.mock("@/lib/auth/serverAuth", () => ({
+  authenticateServerRequest: vi.fn().mockResolvedValue({
+    success: true,
+    user: { userId: "mock-staff", role: "staff", isStaff: true, isAdmin: false },
+  }),
+}));
 
 describe("API Route /api/orders & Anti-Tampering Security Suite", () => {
   beforeEach(() => {

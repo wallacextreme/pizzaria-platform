@@ -7,16 +7,20 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
-import { Lock, ShieldCheck, ChefHat, ArrowRight, Pizza } from "lucide-react";
+import { Lock, ArrowRight, Pizza, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const { login, isAuthenticated } = useAdminAuthStore();
+  const { login, isAuthenticated, checkSession } = useAdminAuthStore();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    checkSession();
+  }, [checkSession]);
 
   React.useEffect(() => {
     if (isAuthenticated) {
@@ -24,7 +28,7 @@ export default function AdminLoginPage() {
     }
   }, [isAuthenticated, router]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -34,32 +38,23 @@ export default function AdminLoginPage() {
     }
 
     setLoading(true);
-    setTimeout(() => {
-      // Simulação ou login com verificação
-      login(email, "admin", "Administrador");
-      setLoading(false);
+    const result = await login(email, password);
+    setLoading(false);
+
+    if (result.success) {
       router.push("/admin");
-    }, 400);
-  };
-
-  const handleQuickLogin = (role: "admin" | "staff") => {
-    setLoading(true);
-    if (role === "admin") {
-      login("admin@pizzaria.com.br", "admin", "Gerente Geral");
     } else {
-      login("cozinha@pizzaria.com.br", "staff", "Pizzaiolo Chefe");
+      setError(result.error || "Falha na autenticação administrativa.");
     }
-    router.push("/admin");
   };
-
 
   return (
     <div className="min-h-screen bg-pizza-charcoal text-pizza-cream flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden">
-      {/* Background glow */}
+      {/* Glow de fundo */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-pizza-terracotta/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-md space-y-6 relative z-10">
-        {/* Header Branding */}
+        {/* Identidade Visual */}
         <div className="text-center space-y-2">
           <Link href="/" className="inline-flex items-center gap-2 group">
             <div className="w-10 h-10 rounded-xl bg-pizza-terracotta flex items-center justify-center text-white shadow-lg shadow-pizza-terracotta/30 group-hover:scale-105 transition-transform">
@@ -83,37 +78,51 @@ export default function AdminLoginPage() {
               <span>Acesso Administrativo</span>
             </CardTitle>
             <CardDescription className="text-xs text-stone-400">
-              Gerencie a cozinha, quadro Kanban e operações em tempo real.
+              Autenticação segura via Supabase Auth e controle de permissões por perfil (RBAC).
             </CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-4">
             {error && (
-              <div className="p-3 rounded-xl bg-red-950/40 border border-red-500/40 text-red-300 text-xs text-center">
-                {error}
+              <div
+                role="alert"
+                className="p-3 rounded-xl bg-red-950/40 border border-red-500/40 text-red-300 text-xs flex items-center gap-2"
+              >
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                <span>{error}</span>
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-stone-300">E-mail corporativo</label>
+                <label htmlFor="admin-email" className="text-xs font-semibold text-stone-300">
+                  E-mail corporativo
+                </label>
                 <Input
+                  id="admin-email"
                   type="email"
-                  placeholder="gerente@pizzaria.com.br"
+                  placeholder="operador@pizzaria.com.br"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="bg-pizza-charcoal border-pizza-border text-xs"
+                  required
+                  autoComplete="email"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-stone-300">Senha de acesso</label>
+                <label htmlFor="admin-password" className="text-xs font-semibold text-stone-300">
+                  Senha de acesso
+                </label>
                 <Input
+                  id="admin-password"
                   type="password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="bg-pizza-charcoal border-pizza-border text-xs"
+                  required
+                  autoComplete="current-password"
                 />
               </div>
 
@@ -127,48 +136,6 @@ export default function AdminLoginPage() {
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </form>
-
-            <div className="relative py-2">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-pizza-border" />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-pizza-charcoal-card px-2 text-stone-500">
-                  Ou acesse com credenciais de teste
-                </span>
-              </div>
-            </div>
-
-            {/* Acesso Rápido para Testes e Demonstração */}
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => handleQuickLogin("admin")}
-                className="text-xs gap-1.5 justify-center py-2 h-auto"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-pizza-gold shrink-0" />
-                <div className="text-left">
-                  <p className="font-bold">Gerente</p>
-                  <p className="text-[10px] text-stone-400">Acesso Total (Admin)</p>
-                </div>
-              </Button>
-
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => handleQuickLogin("staff")}
-                className="text-xs gap-1.5 justify-center py-2 h-auto"
-              >
-                <ChefHat className="w-3.5 h-3.5 text-pizza-terracotta shrink-0" />
-                <div className="text-left">
-                  <p className="font-bold">Cozinha</p>
-                  <p className="text-[10px] text-stone-400">Operação (Staff)</p>
-                </div>
-              </Button>
-            </div>
           </CardContent>
         </Card>
 

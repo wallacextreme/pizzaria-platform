@@ -53,18 +53,23 @@ $$;
 - `UPDATE`: `is_admin(auth.uid())`
 
 ### `orders`
-- `INSERT`: `true` (via Server Route com validação estrita ou anônimo com payload seguro)
-- `SELECT`: `is_staff_or_admin(auth.uid()) OR id = current_setting('request.headers', true)::json->>'x-order-token'::uuid` (ou via API com order_id)
-- `UPDATE`: `is_staff_or_admin(auth.uid())` (para alteração de status)
-- `DELETE`: `is_admin(auth.uid())`
+- `INSERT`: `true` (via Server Route com validação estrita anti-tampering)
+- `SELECT`: `public.is_staff_or_admin(auth.uid())` (listagem geral restrita; leitura de cliente individual ocorre por ID/display_id validado via Route Handler)
+- `UPDATE`: `public.is_staff_or_admin(auth.uid())` (exclusivo para transição de status autorizada)
+- `DELETE`: `public.is_admin(auth.uid())`
 
 ---
 
-## 4. Proteção de Endpoints e Validação de Payload
+## 4. Proteção de Endpoints, Route Guards e Validação de Payload
+- **Defesa em Camadas (Defense in Depth)**:
+  - **Client-Side Guard** (`src/app/admin/layout.tsx`): intercepta acessos sem sessão ativa e redireciona para `/admin/login`.
+  - **Server-Side Guard** (`src/lib/auth/serverAuth.ts`): verifica tokens/cookies de sessão Supabase Auth e consulta `public.user_roles` antes de processar qualquer mutação sensível.
+  - **Database RLS**: políticas no PostgreSQL que bloqueiam mutações diretas sem papel correspondente.
+- **Eliminação Absoluta de Bypasses**: Não existem atalhos de simulação, credenciais hardcoded ou logins mockados em código de produção.
+- **Validação de Transições de Status no Servidor**: O endpoint `PATCH /api/orders` impede saltos arbitrários de status ou reversões ilegítimas (`orderTransitions.ts`).
 - **Validação com Zod**: Schemas estritos para todas as requisições `/api/orders`. Parâmetros inesperados sofrem `strip` ou rejeição.
 - **Prevenção contra Adulteração de Preços**: Valores como `subtotal`, `delivery_fee` e `total` enviados pelo navegador são ignorados e recalculados pelo servidor.
 - **Sanitização**: Strings enviadas pelo usuário (nomes, observações, complementos) são limpas contra XSS e injeções.
-- **Rate Limiting e Idempotência**: Prevenção de pedidos duplicados por duplo clique usando idempotency token gerado no início do checkout.
 
 ---
 
