@@ -109,18 +109,27 @@ Este checklist estabelece os requisitos obrigatórios e o roteiro de homologaç�
 
 ---
 
-## 7. Status Final do Gate de Qualidade
+## 7. Checklist de Verificação do Banco de Dados PostgreSQL
 
-| Critério | Resultado |
-| :--- | :---: |
-| Testes Automatizados (Vitest) | **PASS (149/149)** |
-| Tipagem Estrita (TypeScript) | **PASS (0 erros)** |
-| Análise Estática (ESLint) | **PASS (0 avisos)** |
-| Compilação de Produção (Next.js) | **PASS (0 erros)** |
-| Regressão das Fases 0–5 | **PASS** |
-| Auditoria de Segurança & RLS | **PASS** |
-| Auditoria de Acessibilidade (WCAG 2.1 AA) | **PASS** |
-| Auditoria de Responsividade (360px–1440px+) | **PASS** |
-| SEO Estruturado & PWA Readiness | **PASS** |
-| Validação E2E no Navegador (17 Passos) | **PASS** |
-| **Classificação Geral do Projeto** | **APPROVED FOR PRODUCTION** |
+- [x] **Tabelas Core**: `categories`, `products`, `delivery_zones`, `orders`, `store_settings`, `user_roles` criadas e estruturadas.
+- [x] **Constraints & Checks**:
+  - `orders.status IN ('novo', 'em_preparo', 'no_forno', 'saiu_para_entrega', 'concluido', 'cancelado')`
+  - `orders.delivery_type IN ('delivery', 'retirada')`
+  - `orders.payment_method IN ('pix', 'cartao_credito', 'cartao_debito', 'dinheiro')`
+  - `user_roles.role IN ('admin', 'staff')`
+- [x] **Índices**: Índices criados em chaves de alto volume (`orders.status`, `orders.created_at`, `products.category_id`, `products.is_active`).
+- [x] **Foreign Keys**: Relacionamentos íntegros (`products.category_id` -> `categories.id`, `user_roles.user_id` -> `auth.users.id`).
+- [x] **Triggers Automáticos**: Função e triggers `handle_updated_at` vinculados em todas as tabelas para auditoria temporal precisa.
+- [x] **Políticas RLS & Funções de Segurança**: RLS ativo com funções `is_admin()` e `is_staff_or_admin()` utilizando `SECURITY DEFINER`.
+- [x] **Publicação Realtime**: Tabela `orders` inclusa na publicação `supabase_realtime` para notificações reativas da cozinha.
+
+---
+
+## 8. Status de Release e Prontidão
+
+| Dimensão | Classificação | Detalhes |
+| :--- | :---: | :--- |
+| **Código e Aplicação** | **`CODE READY`** | 100% dos testes passando (149/149), TypeScript, ESLint e build de produção aprovados. |
+| **Endpoint de Testes** | **`SECURE (404 IN PROD)`** | `/api/auth/test-session` desabilitado em `NODE_ENV === "production"`. |
+| **Infraestrutura Cloud** | **`PENDING PROVISIONING`** | Exige provisionamento real da instância Supabase de produção e injeção de credenciais de host. |
+| **Status Oficial** | **`CODE READY`** | O código está pronto para lançamento. O estado passará a `PRODUCTION READY` após a conexão com a infraestrutura Supabase real. |

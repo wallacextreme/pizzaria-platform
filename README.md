@@ -80,3 +80,4 @@ Toda a documentação técnica e viva é mantida na pasta `docs/`:
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — Registros formais de decisões de arquitetura (ADRs).
 - [`docs/PHASES.md`](docs/PHASES.md) — Roadmap fase a fase.
 - [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md) — Checklist de prontidão para produção.
+- [`docs/DEPLOY.md`](docs/DEPLOY.md) — Guia de implantação, Supabase, build, deploy e rollback.

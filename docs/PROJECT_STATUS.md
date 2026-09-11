@@ -95,8 +95,10 @@
 
 ---
 
-## 4. Declaração de Conclusão do Projeto
+## 4. Declaração de Conclusão e Prontidão de Release
 
-O sistema atendeu a todos os critérios de qualidade estabelecidos, superando os padrões exigidos para produção.
+O desenvolvimento funcional das Fases 0 a 6 foi integralmente concluído com nota 10/10.
 
-**Status Oficial**: **APPROVED FOR PRODUCTION**
+- **Classificação de Software**: **`CODE READY`** (100% dos testes, tipos, lint e build de produção validados).
+- **Classificação de Infraestrutura**: **`PENDING INFRASTRUCTURE PROVISIONING`** (Aguardando criação da instância Supabase de produção e injeção das variáveis de ambiente definitivas conforme roteiro em [`docs/DEPLOY.md`](docs/DEPLOY.md)).
+- **Transição de Release**: O status passará de `CODE READY` para `PRODUCTION READY` assim que o ambiente de nuvem estiver conectado e os smoke tests executados.
