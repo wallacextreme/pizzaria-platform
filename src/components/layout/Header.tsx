@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Drawer } from "@/components/ui/Drawer";
-import { Flame, ShoppingBag, Menu, Phone, Sparkles } from "lucide-react";
+import { Flame, ShoppingBag, Menu, Phone, Sparkles, ChefHat } from "lucide-react";
 
 interface HeaderProps {
   cartItemCount?: number;
@@ -57,6 +57,20 @@ export function Header({ cartItemCount = 0, onOpenCart }: HeaderProps) {
               <Phone className="w-3.5 h-3.5 text-pizza-terracotta" />
               <span>Contato</span>
             </a>
+            <Link
+              href="/demo"
+              className="hover:text-pizza-cream hover:text-white transition-colors flex items-center gap-1.5 text-amber-300 font-semibold"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-pizza-gold" />
+              <span>Demo Sandbox</span>
+            </Link>
+            <Link
+              href="/admin"
+              className="hover:text-pizza-cream hover:text-white transition-colors flex items-center gap-1.5 text-pizza-gold font-semibold"
+            >
+              <ChefHat className="w-3.5 h-3.5 text-pizza-terracotta" />
+              <span>Cozinha / Kanban</span>
+            </Link>
           </nav>
 
           {/* Actions: Cart + Mobile Menu */}
@@ -122,6 +136,22 @@ export function Header({ cartItemCount = 0, onOpenCart }: HeaderProps) {
             <span>Falar Conosco</span>
             <Phone className="w-4 h-4 text-pizza-terracotta" />
           </a>
+          <Link
+            href="/demo"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="flex items-center justify-between p-3 rounded-xl bg-pizza-charcoal border border-amber-500/40 text-amber-300 hover:border-pizza-gold transition-colors"
+          >
+            <span>Demo Sandbox (Recrutadores)</span>
+            <Sparkles className="w-4 h-4 text-pizza-gold" />
+          </Link>
+          <Link
+            href="/admin"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="flex items-center justify-between p-3 rounded-xl bg-pizza-charcoal border border-pizza-gold/40 text-pizza-gold hover:border-pizza-terracotta transition-colors"
+          >
+            <span>Cozinha / Kanban</span>
+            <ChefHat className="w-4 h-4 text-pizza-terracotta" />
+          </Link>
         </div>
       </Drawer>
     </>

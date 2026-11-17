@@ -1,11 +1,14 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import type { Order, OrderStatus } from "@/types/domain";
 import { formatCentsToBRL } from "@/domain/currency";
 import { formatOrderForWhatsApp, generateWhatsAppUrl } from "@/domain/whatsapp";
 import { MOCK_STORE_SETTINGS } from "@/lib/mockData";
+import { createClient } from "@/lib/supabase/client";
+import { subscribeRealtimeSync } from "@/lib/realtimeBroadcast";
 import { ToastProvider, useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -19,14 +22,18 @@ import {
   ArrowLeft,
   Loader2,
   AlertCircle,
+  ClipboardList,
+  ChefHat,
+  Flame,
+  XCircle,
 } from "lucide-react";
 
-const STATUS_STEPS: { status: OrderStatus; label: string; icon: string }[] = [
-  { status: "novo", label: "Recebido", icon: "📋" },
-  { status: "em_preparo", label: "Em Preparo", icon: "👨‍🍳" },
-  { status: "no_forno", label: "No Forno", icon: "🔥" },
-  { status: "saiu_para_entrega", label: "A Caminho", icon: "🛵" },
-  { status: "concluido", label: "Entregue", icon: "✅" },
+const STATUS_STEPS: { status: OrderStatus; label: string; icon: React.ElementType }[] = [
+  { status: "novo", label: "Recebido", icon: ClipboardList },
+  { status: "em_preparo", label: "Em Preparo", icon: ChefHat },
+  { status: "no_forno", label: "No Forno", icon: Flame },
+  { status: "saiu_para_entrega", label: "A Caminho", icon: Bike },
+  { status: "concluido", label: "Entregue", icon: CheckCircle2 },
 ];
 
 function OrderTrackingContent() {
@@ -36,27 +43,85 @@ function OrderTrackingContent() {
   const orderId = params?.id as string;
 
   const [order, setOrder] = React.useState<Order | null>(null);
+  const [whatsappNumber, setWhatsappNumber] = React.useState(MOCK_STORE_SETTINGS.whatsapp_number);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    async function loadOrder() {
-      if (!orderId) return;
-      try {
-        const res = await fetch(`/api/orders?id=${orderId}`);
-        const data = await res.json();
-        if (res.ok && data.success && data.order) {
-          setOrder(data.order);
-        } else {
-          setError(data.error || "Pedido não encontrado.");
-        }
-      } catch {
-        setError("Erro ao carregar informações do pedido.");
-      } finally {
-        setIsLoading(false);
+  const loadOrder = React.useCallback(async () => {
+    if (!orderId) return;
+    try {
+      const res = await fetch(`/api/orders?id=${orderId}`, { cache: "no-store" });
+      const data = await res.json();
+      if (res.ok && data.success && data.order) {
+        setOrder(data.order);
+        setError(null);
+      } else {
+        setError(data.error || "Pedido não encontrado.");
       }
+    } catch {
+      setError("Erro ao carregar informações do pedido.");
+    } finally {
+      setIsLoading(false);
     }
-    loadOrder();
+  }, [orderId]);
+
+  React.useEffect(() => {
+    void loadOrder();
+
+    fetch("/api/store/status", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success && d.settings?.whatsapp_number) {
+          setWhatsappNumber(d.settings.whatsapp_number);
+        }
+      })
+      .catch(() => {});
+  }, [loadOrder]);
+
+  // Atualização ao vivo via BroadcastChannel + Polling de 4s enquanto pedido estiver ativo
+  React.useEffect(() => {
+    if (!orderId) return;
+
+    const unsubscribeBroadcast = subscribeRealtimeSync(["orders"], (ev) => {
+      if (!ev.orderId || ev.orderId === orderId) {
+        void loadOrder();
+      }
+    });
+
+    const interval = setInterval(() => {
+      if (order?.status !== "concluido" && order?.status !== "cancelado") {
+        void loadOrder();
+      }
+    }, 4000);
+
+    return () => {
+      unsubscribeBroadcast();
+      clearInterval(interval);
+    };
+  }, [orderId, order?.status, loadOrder]);
+
+  // Supabase Realtime para atualizações entre dispositivos distintos
+  React.useEffect(() => {
+    if (!orderId) return;
+    const supabase = createClient();
+
+    const channel = supabase
+      .channel(`order-tracking-${orderId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "orders", filter: `id=eq.${orderId}` },
+        (payload) => {
+          const updated = payload.new as Order;
+          if (updated?.id === orderId) {
+            setOrder(updated);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [orderId]);
 
   if (isLoading) {
@@ -83,77 +148,116 @@ function OrderTrackingContent() {
     );
   }
 
+  const isCancelled = order.status === "cancelado";
   const currentStepIndex = STATUS_STEPS.findIndex((s) => s.status === order.status);
-  const pixKeyDemo = "00020126580014BR.GOV.BCB.PIX0136fornomassa-pizzaria-chave-demo5204000053039865802BR5925FORNO E MASSA PIZZARIA6009SAO PAULO62070503***6304E1F4";
+  const pixKeyDemo =
+    "00020126580014BR.GOV.BCB.PIX0136fornomassa-pizzaria-chave-demo5204000053039865802BR5925FORNO E MASSA PIZZARIA6009SAO PAULO62070503***6304E1F4";
 
   return (
     <div className="min-h-screen bg-pizza-charcoal text-pizza-cream py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto space-y-8 text-left">
-        {/* Top Header com Voltar */}
-        <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push("/")}
-            className="text-stone-400 hover:text-white gap-1.5"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Cardápio</span>
-          </Button>
+        {/* Top Header */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/")}
+              className="text-stone-400 hover:text-white gap-1.5"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Cardápio</span>
+            </Button>
+            <Link
+              href="/admin"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pizza-charcoal-card border border-pizza-border text-xs font-semibold text-pizza-gold hover:border-pizza-terracotta hover:text-white transition-colors"
+            >
+              <ChefHat className="w-3.5 h-3.5" />
+              <span>Painel da Cozinha (Kanban)</span>
+            </Link>
+          </div>
 
-          <Badge variant="success" dot pulse>
-            Pedido Confirmado
+          <Badge
+            variant={isCancelled ? "danger" : "success"}
+            dot
+            pulse={!isCancelled && order.status !== "concluido"}
+          >
+            {isCancelled
+              ? "Pedido Cancelado"
+              : order.status === "concluido"
+              ? "Pedido Concluído"
+              : "Acompanhamento Ao Vivo"}
           </Badge>
         </div>
 
         {/* Card Principal de Confirmação */}
         <div className="p-6 sm:p-8 rounded-3xl bg-pizza-charcoal-card border border-pizza-border shadow-2xl space-y-6">
           <div className="text-center space-y-2">
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-pizza-terracotta/20 border border-pizza-terracotta/40 flex items-center justify-center text-pizza-terracotta">
-              <CheckCircle2 className="w-8 h-8" />
+            <div
+              className={`w-14 h-14 mx-auto rounded-2xl flex items-center justify-center border ${
+                isCancelled
+                  ? "bg-red-950/40 border-red-500/40 text-red-400"
+                  : "bg-pizza-terracotta/20 border-pizza-terracotta/40 text-pizza-terracotta"
+              }`}
+            >
+              {isCancelled ? <XCircle className="w-8 h-8" /> : <CheckCircle2 className="w-8 h-8" />}
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-pizza-cream font-display">
-              Pedido {order.display_id} Recebido!
+            <h1 className="text-2xl sm:text-3xl font-black text-pizza-cream font-display tabular-nums">
+              Pedido {order.display_id} {isCancelled ? "Cancelado" : "Recebido!"}
             </h1>
             <p className="text-xs sm:text-sm text-stone-300">
-              Obrigado, <strong className="text-pizza-cream">{order.customer.name}</strong>. Nosso pizzaiolo já recebeu seu pedido.
+              {isCancelled
+                ? "Este pedido foi cancelado pela equipe. Em caso de dúvida, entre em contato pelo WhatsApp."
+                : (
+                  <>
+                    Obrigado, <strong className="text-pizza-cream">{order.customer.name}</strong>.
+                    Acompanhe em tempo real o preparo na cozinha.
+                  </>
+                )}
             </p>
           </div>
 
-          {/* Stepper de Status Operacional */}
-          <div className="pt-2">
-            <div className="grid grid-cols-5 gap-1 text-center">
-              {STATUS_STEPS.map((step, idx) => {
-                const isPassed = idx <= currentStepIndex;
-                const isCurrent = idx === currentStepIndex;
-                return (
-                  <div key={step.status} className="flex flex-col items-center gap-1.5">
-                    <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm transition-all ${
-                        isCurrent
-                          ? "bg-pizza-terracotta text-white shadow-lg shadow-pizza-terracotta/30 ring-2 ring-pizza-terracotta ring-offset-2 ring-offset-pizza-charcoal-card font-bold"
-                          : isPassed
-                          ? "bg-pizza-basil/20 text-emerald-400 border border-emerald-500/30"
-                          : "bg-pizza-charcoal text-stone-600 border border-pizza-border"
-                      }`}
-                    >
-                      {step.icon}
+          {/* Stepper de Status Operacional com Ícones Lucide */}
+          {!isCancelled && (
+            <div className="pt-2">
+              <div className="grid grid-cols-5 gap-1.5 text-center">
+                {STATUS_STEPS.map((step, idx) => {
+                  const Icon = step.icon;
+                  const isPassed = idx <= currentStepIndex;
+                  const isCurrent = idx === currentStepIndex;
+                  return (
+                    <div key={step.status} className="flex flex-col items-center gap-1.5">
+                      <div
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                          isCurrent
+                            ? "bg-pizza-terracotta text-white shadow-lg shadow-pizza-terracotta/30 ring-2 ring-pizza-terracotta ring-offset-2 ring-offset-pizza-charcoal-card"
+                            : isPassed
+                            ? "bg-pizza-basil/20 text-emerald-400 border border-emerald-500/30"
+                            : "bg-pizza-charcoal text-stone-600 border border-pizza-border"
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <span
+                        className={`text-[10px] font-semibold leading-tight ${
+                          isCurrent
+                            ? "text-pizza-cream font-bold"
+                            : isPassed
+                            ? "text-stone-300"
+                            : "text-stone-600"
+                        }`}
+                      >
+                        {step.label}
+                      </span>
                     </div>
-                    <span
-                      className={`text-[10px] font-semibold leading-tight ${
-                        isCurrent ? "text-pizza-cream font-bold" : isPassed ? "text-stone-300" : "text-stone-600"
-                      }`}
-                    >
-                      {step.label}
-                    </span>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Previsão e Modalidade */}
-          <div className="p-4 rounded-2xl bg-pizza-charcoal border border-pizza-border flex items-center justify-between text-xs">
+          <div className="p-4 rounded-2xl bg-pizza-charcoal border border-pizza-border flex items-center justify-between text-xs tabular-nums">
             <div className="flex items-center gap-2.5">
               {order.delivery_type === "delivery" ? (
                 <Bike className="w-5 h-5 text-pizza-terracotta" />
@@ -172,12 +276,14 @@ function OrderTrackingContent() {
               </div>
             </div>
             <span className="text-pizza-gold font-bold">
-              {order.delivery_type === "delivery" ? `Taxa: ${formatCentsToBRL(order.delivery_fee_cents)}` : "Grátis"}
+              {order.delivery_type === "delivery"
+                ? `Taxa: ${formatCentsToBRL(order.delivery_fee_cents)}`
+                : "Grátis"}
             </span>
           </div>
 
           {/* Se PIX: Chave Copia e Cola Demonstrativa */}
-          {order.payment_method === "pix" && (
+          {order.payment_method === "pix" && !isCancelled && (
             <div className="p-4 rounded-2xl bg-pizza-gold/10 border border-pizza-gold/30 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-pizza-gold flex items-center gap-1.5">
@@ -245,7 +351,7 @@ function OrderTrackingContent() {
                       </span>
                     )}
                   </div>
-                  <span className="font-bold text-pizza-cream whitespace-nowrap">
+                  <span className="font-bold text-pizza-cream whitespace-nowrap tabular-nums">
                     {formatCentsToBRL(item.total_price_cents)}
                   </span>
                 </div>
@@ -254,7 +360,7 @@ function OrderTrackingContent() {
           </div>
 
           {/* Resumo Financeiro */}
-          <div className="p-4 rounded-2xl bg-pizza-charcoal border border-pizza-border space-y-2 text-xs">
+          <div className="p-4 rounded-2xl bg-pizza-charcoal border border-pizza-border space-y-2 text-xs tabular-nums">
             <div className="flex justify-between text-stone-400">
               <span>Subtotal</span>
               <span className="text-pizza-cream">{formatCentsToBRL(order.subtotal_cents)}</span>
@@ -262,7 +368,9 @@ function OrderTrackingContent() {
             {order.delivery_type === "delivery" && (
               <div className="flex justify-between text-stone-400">
                 <span>Taxa de Entrega</span>
-                <span className="text-pizza-cream">{formatCentsToBRL(order.delivery_fee_cents)}</span>
+                <span className="text-pizza-cream">
+                  {formatCentsToBRL(order.delivery_fee_cents)}
+                </span>
               </div>
             )}
             <div className="pt-2 border-t border-pizza-border flex justify-between items-baseline font-black text-sm text-pizza-cream">
@@ -277,7 +385,7 @@ function OrderTrackingContent() {
             )}
           </div>
 
-          {/* Ações: Reenviar WhatsApp / Novo Pedido */}
+          {/* Ações */}
           <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Button
               variant="gold"
@@ -285,7 +393,7 @@ function OrderTrackingContent() {
               className="w-full font-bold text-xs gap-2"
               onClick={() => {
                 const message = formatOrderForWhatsApp(order);
-                const url = generateWhatsAppUrl(MOCK_STORE_SETTINGS.whatsapp_number, message);
+                const url = generateWhatsAppUrl(whatsappNumber, message);
                 window.open(url, "_blank", "noopener,noreferrer");
               }}
             >

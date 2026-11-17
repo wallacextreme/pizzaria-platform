@@ -6,7 +6,15 @@ import { formatCentsToBRL, parseBRLInputToCents } from "@/domain/currency";
 import { formatOrderForWhatsApp, generateWhatsAppUrl } from "@/domain/whatsapp";
 import { fetchAddressByCep } from "@/lib/viacep";
 import { MOCK_DELIVERY_ZONES, MOCK_STORE_SETTINGS } from "@/lib/mockData";
-import type { DeliveryType, PaymentMethod, Order } from "@/types/domain";
+import { createDemoOrder } from "@/lib/demoSandboxStore";
+import { publishRealtimeSync } from "@/lib/realtimeBroadcast";
+import type {
+  DeliveryType,
+  PaymentMethod,
+  Order,
+  DeliveryZone,
+  StoreSettings,
+} from "@/types/domain";
 import { Dialog } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -31,13 +39,31 @@ import {
 interface CheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
+  deliveryZones?: DeliveryZone[];
+  settings?: StoreSettings;
+  demoMode?: boolean;
+  onOrderCreatedDemo?: (order: Order) => void;
 }
 
-export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
+export function CheckoutModal({
+  isOpen,
+  onClose,
+  deliveryZones,
+  settings,
+  demoMode = false,
+  onOrderCreatedDemo,
+}: CheckoutModalProps) {
   const router = useRouter();
   const { showToast } = useToast();
   const { items, getSubtotalCents, clearCart, closeCart } = useCartStore();
 
+  const activeZones = React.useMemo(() => {
+    const source = deliveryZones && deliveryZones.length > 0 ? deliveryZones : MOCK_DELIVERY_ZONES;
+    const enabled = source.filter((z) => z.active);
+    return enabled.length > 0 ? enabled : source;
+  }, [deliveryZones]);
+
+  const activeSettings = settings || MOCK_STORE_SETTINGS;
   const subtotalCents = getSubtotalCents();
 
   // Estados do Formulário de Checkout
@@ -50,7 +76,9 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
   const [street, setStreet] = React.useState("");
   const [number, setNumber] = React.useState("");
   const [complement, setComplement] = React.useState("");
-  const [neighborhood, setNeighborhood] = React.useState("Vila Gastronômica");
+  const [neighborhood, setNeighborhood] = React.useState(
+    activeZones[0]?.neighborhood || "Vila Gastronômica"
+  );
   const [city, setCity] = React.useState("São Paulo");
   const [state, setState] = React.useState("SP");
   const [reference, setReference] = React.useState("");
@@ -66,21 +94,30 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
-  // Cálculo da Taxa de Entrega
+  /**
+   * REGRA DE NEGÓCIO — TAXA DE ENTREGA POR BAIRRO (DeliveryZone):
+   * 1. Para modalidade 'retirada', a taxa de entrega é sempre R$ 0,00 (0 centavos).
+   * 2. Para 'delivery', a zona é localizada pelo bairro selecionado (case-insensitive)
+   *    nas zonas ativas configuradas pelo administrador.
+   * 3. Cada zona define `fee_cents` (inteiro em centavos) e `estimated_time_minutes`.
+   * 4. Caso o CEP preencha um bairro fora da lista ou haja divergência, o servidor
+   *    (`orderValidator.ts`) recalcula a taxa autoritativa no momento do POST /api/orders.
+   */
   const deliveryZone = React.useMemo(() => {
     if (deliveryType === "retirada") return null;
     return (
-      MOCK_DELIVERY_ZONES.find(
-        (z) => z.neighborhood.toLowerCase() === neighborhood.toLowerCase()
-      ) || MOCK_DELIVERY_ZONES[0]
+      activeZones.find(
+        (z) => z.neighborhood.trim().toLowerCase() === neighborhood.trim().toLowerCase()
+      ) || activeZones[0] || null
     );
-  }, [deliveryType, neighborhood]);
+  }, [deliveryType, neighborhood, activeZones]);
 
   const deliveryFeeCents = React.useMemo(() => {
     if (deliveryType === "retirada") return 0;
-    return deliveryZone?.fee_cents || 500;
+    return deliveryZone?.fee_cents ?? 500;
   }, [deliveryType, deliveryZone]);
 
+  const estimatedMinutes = deliveryZone?.estimated_time_minutes ?? activeSettings.delivery_settings.default_estimated_time_min ?? 45;
   const totalCents = subtotalCents + deliveryFeeCents;
   const changeForCents = needsChange ? parseBRLInputToCents(changeForRaw) : undefined;
 
@@ -94,7 +131,14 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
         const addr = await fetchAddressByCep(clean);
         if (addr) {
           setStreet(addr.street);
-          setNeighborhood(addr.neighborhood || neighborhood);
+          if (addr.neighborhood) {
+            const matchedZone = activeZones.find(
+              (z) => z.neighborhood.toLowerCase() === addr.neighborhood.toLowerCase()
+            );
+            if (matchedZone) {
+              setNeighborhood(matchedZone.neighborhood);
+            }
+          }
           setCity(addr.city);
           setState(addr.state);
           showToast("Endereço localizado via CEP com sucesso!", "success");
@@ -113,7 +157,6 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
   const handleSubmitOrder = async (channel: "web" | "whatsapp") => {
     setErrorMessage(null);
 
-    // Validações básicas no client antes do envio
     if (!name.trim() || name.trim().length < 2) {
       setErrorMessage("Por favor, informe seu nome completo.");
       return;
@@ -180,35 +223,50 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
     };
 
     try {
-      const response = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const useClientDemo = demoMode || process.env.NEXT_PUBLIC_DEMO_STATIC === "true";
+      let createdOrder: Order;
 
-      const data = await response.json();
+      if (useClientDemo) {
+        const result = createDemoOrder(payload);
+        createdOrder = result.order;
+      } else {
+        const response = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Erro ao processar seu pedido no servidor.");
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || "Erro ao processar seu pedido no servidor.");
+        }
+
+        createdOrder = data.order;
+
+        // Notifica imediatamente qualquer aba do painel admin aberta via BroadcastChannel
+        publishRealtimeSync("orders", createdOrder.id);
       }
 
-      const createdOrder: Order = data.order;
-
-      // Limpa o carrinho
       clearCart();
       closeCart();
       onClose();
 
       showToast(`Pedido ${createdOrder.display_id} confirmado com sucesso!`, "success");
 
-      if (channel === "whatsapp") {
+      if (channel === "whatsapp" && !useClientDemo) {
         const message = formatOrderForWhatsApp(createdOrder);
-        const whatsappUrl = generateWhatsAppUrl(MOCK_STORE_SETTINGS.whatsapp_number, message);
+        const whatsappUrl = generateWhatsAppUrl(activeSettings.whatsapp_number, message);
         window.open(whatsappUrl, "_blank", "noopener,noreferrer");
       }
 
-      // Redireciona para tela de confirmação e rastreamento
-      router.push(`/pedido/${createdOrder.id}`);
+      if (onOrderCreatedDemo) {
+        onOrderCreatedDemo(createdOrder);
+      } else if (useClientDemo) {
+        router.push(`/demo?track=${encodeURIComponent(createdOrder.id)}`);
+      } else {
+        router.push(`/pedido/${createdOrder.id}`);
+      }
     } catch (err: unknown) {
       if (err instanceof Error) {
         setErrorMessage(err.message);
@@ -230,7 +288,6 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
       className="max-h-[92vh] overflow-y-auto"
     >
       <div className="space-y-6 text-left py-2">
-        {/* Banner de Erro Geral se houver */}
         {errorMessage && (
           <div className="p-3.5 rounded-xl bg-red-500/15 border border-red-500/30 text-red-300 text-xs flex items-center gap-2 animate-in fade-in">
             <AlertCircle className="w-4 h-4 shrink-0" />
@@ -238,12 +295,12 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
           </div>
         )}
 
-        {/* 1. SELEÇÃO DE MODALIDADE: DELIVERY OU RETIRADA */}
+        {/* 1. SELEÇÃO DE MODALIDADE */}
         <div className="grid grid-cols-2 gap-3 p-1 bg-pizza-charcoal rounded-2xl border border-pizza-border">
           <button
             type="button"
             onClick={() => setDeliveryType("delivery")}
-            className={`flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center justify-center gap-2 py-3 min-h-[44px] rounded-xl text-xs font-bold transition-all ${
               deliveryType === "delivery"
                 ? "bg-pizza-terracotta text-white shadow-lg shadow-pizza-terracotta/20"
                 : "text-stone-400 hover:text-stone-200"
@@ -255,7 +312,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
           <button
             type="button"
             onClick={() => setDeliveryType("retirada")}
-            className={`flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center justify-center gap-2 py-3 min-h-[44px] rounded-xl text-xs font-bold transition-all ${
               deliveryType === "retirada"
                 ? "bg-pizza-terracotta text-white shadow-lg shadow-pizza-terracotta/20"
                 : "text-stone-400 hover:text-stone-200"
@@ -287,7 +344,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
           </div>
         </section>
 
-        {/* 3. ENDEREÇO DE ENTREGA OU LOCAL DA RETIRADA */}
+        {/* 3. ENDEREÇO OU RETIRADA */}
         {deliveryType === "delivery" ? (
           <section className="space-y-3">
             <div className="flex items-center justify-between">
@@ -347,9 +404,9 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
                   id="neighborhood-select"
                   value={neighborhood}
                   onChange={(e) => setNeighborhood(e.target.value)}
-                  className="w-full h-11 px-3 bg-pizza-charcoal border border-pizza-border rounded-xl text-sm text-pizza-cream focus:outline-none focus:ring-2 focus:ring-pizza-terracotta"
+                  className="w-full h-11 px-3 bg-pizza-charcoal border border-pizza-border rounded-xl text-sm text-pizza-cream focus:outline-none focus:ring-2 focus:ring-pizza-terracotta tabular-nums"
                 >
-                  {MOCK_DELIVERY_ZONES.map((zone) => (
+                  {activeZones.map((zone) => (
                     <option key={zone.id} value={zone.neighborhood}>
                       {zone.neighborhood} ({formatCentsToBRL(zone.fee_cents)})
                     </option>
@@ -365,11 +422,16 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
               onChange={(e) => setReference(e.target.value)}
             />
 
-            {/* Informações da Zona de Entrega */}
-            <div className="p-3 rounded-xl bg-pizza-charcoal border border-pizza-border flex items-center justify-between text-xs">
+            {/* Informações Dinâmicas da Zona de Entrega */}
+            <div className="p-3 rounded-xl bg-pizza-charcoal border border-pizza-border flex items-center justify-between text-xs tabular-nums">
               <div className="flex items-center gap-2 text-stone-300">
                 <Clock className="w-4 h-4 text-pizza-gold" />
-                <span>Previsão de entrega: <strong>35 a 50 min</strong></span>
+                <span>
+                  Previsão de entrega:{" "}
+                  <strong>
+                    {Math.max(20, estimatedMinutes - 5)} a {estimatedMinutes + 10} min
+                  </strong>
+                </span>
               </div>
               <Badge variant="terracotta">
                 Taxa: {formatCentsToBRL(deliveryFeeCents)}
@@ -388,7 +450,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
                   Rua das Pizzas Artesanais, 1000 — Vila Gastronômica, São Paulo - SP
                 </p>
                 <p className="text-emerald-400 font-semibold pt-1">
-                  ✓ Sem taxa de entrega • Pronto em cerca de 20 a 30 minutos
+                  Sem taxa de entrega • Pronto em cerca de 20 a 30 minutos
                 </p>
               </div>
             </div>
@@ -404,7 +466,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
             <button
               type="button"
               onClick={() => setPaymentMethod("pix")}
-              className={`p-3 rounded-xl border text-center transition-colors flex flex-col items-center gap-1.5 ${
+              className={`p-3 min-h-[60px] rounded-xl border text-center transition-colors flex flex-col items-center justify-center gap-1.5 ${
                 paymentMethod === "pix"
                   ? "bg-pizza-terracotta/20 border-pizza-terracotta text-white font-bold"
                   : "bg-pizza-charcoal border-pizza-border text-stone-400 hover:border-stone-600"
@@ -416,7 +478,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
             <button
               type="button"
               onClick={() => setPaymentMethod("cartao")}
-              className={`p-3 rounded-xl border text-center transition-colors flex flex-col items-center gap-1.5 ${
+              className={`p-3 min-h-[60px] rounded-xl border text-center transition-colors flex flex-col items-center justify-center gap-1.5 ${
                 paymentMethod === "cartao"
                   ? "bg-pizza-terracotta/20 border-pizza-terracotta text-white font-bold"
                   : "bg-pizza-charcoal border-pizza-border text-stone-400 hover:border-stone-600"
@@ -428,7 +490,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
             <button
               type="button"
               onClick={() => setPaymentMethod("dinheiro")}
-              className={`p-3 rounded-xl border text-center transition-colors flex flex-col items-center gap-1.5 ${
+              className={`p-3 min-h-[60px] rounded-xl border text-center transition-colors flex flex-col items-center justify-center gap-1.5 ${
                 paymentMethod === "dinheiro"
                   ? "bg-pizza-terracotta/20 border-pizza-terracotta text-white font-bold"
                   : "bg-pizza-charcoal border-pizza-border text-stone-400 hover:border-stone-600"
@@ -439,7 +501,6 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
             </button>
           </div>
 
-          {/* Opções específicas de Dinheiro */}
           {paymentMethod === "dinheiro" && (
             <div className="p-3.5 rounded-xl bg-pizza-charcoal border border-pizza-border space-y-3">
               <label className="flex items-center gap-2 text-xs font-semibold text-pizza-cream cursor-pointer">
@@ -462,7 +523,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
                     helperText={`Total atual do pedido: ${formatCentsToBRL(totalCents)}`}
                   />
                   {changeForCents && changeForCents >= totalCents && (
-                    <div className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
+                    <div className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5 tabular-nums">
                       <CheckCircle2 className="w-4 h-4" />
                       <span>
                         Levar troco de: {formatCentsToBRL(changeForCents - totalCents)}
@@ -474,7 +535,6 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
             </div>
           )}
 
-          {/* Exibição Demonstrativa de PIX */}
           {paymentMethod === "pix" && (
             <div className="p-3.5 rounded-xl bg-pizza-charcoal border border-pizza-border space-y-2 text-xs text-stone-300">
               <p className="font-semibold text-pizza-cream flex items-center gap-1.5">
@@ -490,7 +550,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
 
         {/* 5. RESUMO DE VALORES E BOTÕES DE ENVIO */}
         <div className="pt-4 border-t border-pizza-border space-y-4">
-          <div className="p-3.5 rounded-xl bg-pizza-charcoal border border-pizza-border space-y-1.5 text-xs">
+          <div className="p-3.5 rounded-xl bg-pizza-charcoal border border-pizza-border space-y-1.5 text-xs tabular-nums">
             <div className="flex justify-between text-stone-400">
               <span>Subtotal dos Itens</span>
               <span className="text-pizza-cream font-medium">
@@ -515,7 +575,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
               size="lg"
               isLoading={isSubmitting}
               onClick={() => handleSubmitOrder("whatsapp")}
-              className="w-full font-bold text-xs gap-2"
+              className="w-full font-bold text-xs gap-2 min-h-[44px]"
             >
               <MessageSquare className="w-4 h-4" />
               <span>Pedir via WhatsApp</span>
@@ -526,7 +586,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
               size="lg"
               isLoading={isSubmitting}
               onClick={() => handleSubmitOrder("web")}
-              className="w-full font-bold text-xs gap-2"
+              className="w-full font-bold text-xs gap-2 min-h-[44px]"
             >
               <Send className="w-4 h-4" />
               <span>Enviar para a Cozinha</span>

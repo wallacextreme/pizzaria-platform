@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET as getOrders, PATCH as patchOrders } from "./orders/route";
-import { PATCH as patchProducts } from "./products/route";
+import { POST as postProducts, PATCH as patchProducts } from "./products/route";
 import { POST as postStoreStatus } from "./store/status/route";
 import { globalOrderRepository } from "@/repositories/mockOrderRepository";
-import { MOCK_PRODUCTS } from "@/lib/mockData";
+import { MOCK_PRODUCTS, resetCatalogStoreForTests } from "@/lib/mockData";
 
 // Mock de authenticateServerRequest
 const mockAuth = vi.fn();
@@ -14,6 +14,7 @@ vi.mock("@/lib/auth/serverAuth", () => ({
 describe("Admin API Endpoints Security & RBAC Protection", () => {
   beforeEach(() => {
     globalOrderRepository.clear();
+    resetCatalogStoreForTests();
     vi.clearAllMocks();
   });
 
@@ -233,6 +234,59 @@ describe("Admin API Endpoints Security & RBAC Protection", () => {
       });
       const autoRes = await postStoreStatus(autoReq);
       expect(autoRes.status).toBe(200);
+    });
+
+    it("permite admin atualizar regra meio a meio e taxa de zona de entrega", async () => {
+      mockAuth.mockResolvedValue({
+        success: true,
+        user: { userId: "adm-1", role: "admin", isStaff: true, isAdmin: true },
+      });
+
+      const res = await postStoreStatus(
+        new Request("http://localhost:3000/api/store/status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            half_and_half_pricing_rule: "media_ponderada",
+            delivery_zone: {
+              id: "zone-1",
+              fee_cents: 950,
+              estimated_time_minutes: 32,
+            },
+          }),
+        })
+      );
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.half_and_half_pricing_rule).toBe("media_ponderada");
+      expect(json.deliveryZones.find((z: { id: string }) => z.id === "zone-1")?.fee_cents).toBe(950);
+    });
+  });
+
+  describe("POST /api/products", () => {
+    it("permite admin cadastrar novo item no catálogo", async () => {
+      mockAuth.mockResolvedValue({
+        success: true,
+        user: { userId: "adm-1", role: "admin", isStaff: true, isAdmin: true },
+      });
+
+      const res = await postProducts(
+        new Request("http://localhost:3000/api/products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: "Pizza Carbonara Especial",
+            description: "Guanciale artesanal, pecorino romano e gema curada.",
+            category_id: "cat-especiais",
+            is_pizza: true,
+            base_price_cents: 7900,
+          }),
+        })
+      );
+      expect(res.status).toBe(201);
+      const json = await res.json();
+      expect(json.success).toBe(true);
+      expect(json.product.sizes.length).toBe(4);
     });
   });
 });

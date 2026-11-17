@@ -1,6 +1,20 @@
-# Plataforma de Pizzaria Full-Stack — Produção
+# Plataforma de Pizzaria Full-Stack — Forno & Massa (PWA + Kanban Realtime)
 
-Sistema de e-commerce gastronômico profissional de alta performance para pizzarias artesanais, composto por Área Pública (cardápio interativo, construtor de pizza meio a meio, carrinho e checkout) e Painel Administrativo em tempo real (Kanban de cozinha, alertas sonoros, controle de produtos e horários da loja).
+[![Demo PWA Online](https://img.shields.io/badge/Demo_Online-GitHub_Pages-C84B31?style=for-the-badge&logo=github)](https://wallacextreme.github.io/pizzaria-platform/demo/)
+[![Testes Vitest](https://img.shields.io/badge/Vitest-152_Testes_(22_arquivos)-16a34a?style=for-the-badge&logo=vitest&logoColor=white)](src/)
+[![PWA Instalável](https://img.shields.io/badge/PWA-Service_Worker_%2B_Manifest-0ea5e9?style=for-the-badge)](public/sw.js)
+
+Sistema de e-commerce gastronômico profissional de alta performance para pizzarias artesanais, composto por Área Pública (cardápio interativo, construtor de pizza meio a meio, carrinho e checkout), **PWA instalável Offline-First** (`sw.js` + ícones 192/512 PNG), **Modo Demo Sandbox para Recrutadores (`/demo`)** e Painel Administrativo protegido em tempo real (Kanban de cozinha, alertas sonoros, controle de produtos e horários da loja).
+
+---
+
+## 🎯 Demo Online para Recrutadores (Sem Login / Dados Fictícios)
+
+* **Cardápio Público (PWA):** [https://wallacextreme.github.io/pizzaria-platform/](https://wallacextreme.github.io/pizzaria-platform/)
+* **Demo Sandbox Completa (Cliente + Cozinha Kanban + Rastreio Ao Vivo):** [https://wallacextreme.github.io/pizzaria-platform/demo/](https://wallacextreme.github.io/pizzaria-platform/demo/)
+
+> [!NOTE]
+> A demonstração `/demo` opera 100% em sandbox local no navegador (`localStorage` + `BroadcastChannel`) com dados fictícios, mantendo o painel `/admin` em produção rigorosamente protegido por Supabase Auth + RBAC + PostgreSQL RLS.
 
 ---
 
@@ -81,3 +95,20 @@ Toda a documentação técnica e viva é mantida na pasta `docs/`:
 - [`docs/PHASES.md`](docs/PHASES.md) — Roadmap fase a fase.
 - [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md) — Checklist de prontidão para produção.
 - [`docs/DEPLOY.md`](docs/DEPLOY.md) — Guia de implantação, Supabase, build, deploy e rollback.
+
+---
+## ☕ Apoie este Projeto
+
+Se este projeto ou código foi útil para você, considere apoiar o meu trabalho com uma doação espontânea de qualquer valor. Sua contribuição ajuda a manter o desenvolvimento de novas ferramentas e soluções open-source!
+
+<details>
+<summary><strong>💠 Clique aqui para exibir os dados do PIX (Doação Voluntária)</strong></summary>
+
+<br>
+
+- **Chave PIX (ALEATORIA):** `91afe4f0-a466-4423-9d9c-d6a0ffea9b3e`
+- **Banco:** C6 Bank
+- **Titular:** Wallace de Paulo Soares
+
+> *Nota Legal: Contribuição 100% voluntária e espontânea de apoio ao desenvolvedor (Art. 538 do Código Civil).*
+</details>

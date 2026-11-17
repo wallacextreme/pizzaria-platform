@@ -1,5 +1,6 @@
 import * as React from "react";
-import { Flame, Phone, MapPin, Clock, Heart } from "lucide-react";
+import Link from "next/link";
+import { Flame, Phone, MapPin, Clock, Heart, ChefHat } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 
 export function Footer() {
@@ -72,7 +73,21 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left text-[11px] text-stone-500">
           <p>© {new Date().getFullYear()} Forno & Massa Pizzaria. Todos os direitos reservados.</p>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <Link
+              href="/demo"
+              className="inline-flex items-center gap-1.5 text-amber-300 hover:text-pizza-gold transition-colors font-semibold"
+            >
+              <span>Demo Sandbox</span>
+            </Link>
+            <span className="text-stone-600">•</span>
+            <Link
+              href="/admin"
+              className="inline-flex items-center gap-1.5 text-stone-400 hover:text-pizza-gold transition-colors font-semibold"
+            >
+              <ChefHat className="w-3.5 h-3.5 text-pizza-terracotta" />
+              <span>Cozinha / Kanban</span>
+            </Link>
             <span className="text-stone-600">•</span>
             <span>Ambiente 100% Seguro</span>
             <span className="text-stone-600">•</span>

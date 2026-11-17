@@ -177,7 +177,13 @@ export const useAdminAuthStore = create<AdminAuthState>()((set) => ({
     } catch {
       // Falha silenciosa no signOut se cliente estiver indisponível
     } finally {
-      if (typeof window !== "undefined" && window.location?.port === "3000" && typeof fetch === "function") {
+      const isVitest = typeof process !== "undefined" && Boolean(process.env?.VITEST);
+      if (
+        !isVitest &&
+        typeof window !== "undefined" &&
+        window.location?.port === "3000" &&
+        typeof fetch === "function"
+      ) {
         try {
           fetch("/api/auth/test-session", { method: "DELETE" }).catch(() => {});
         } catch {

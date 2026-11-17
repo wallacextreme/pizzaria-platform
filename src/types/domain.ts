@@ -49,6 +49,8 @@ export interface ExtraOption {
 export interface ProductFlags {
   is_pizza: boolean;
   is_featured: boolean;
+  vegetarian?: boolean;
+  spicy?: boolean;
   badge?: string;
 }
 

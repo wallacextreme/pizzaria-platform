@@ -5,28 +5,41 @@ import { AdminHeader } from "@/components/admin/AdminHeader";
 import { MetricsCards } from "@/components/admin/MetricsCards";
 import { KanbanBoard } from "@/components/admin/KanbanBoard";
 import { ProductManagement } from "@/components/admin/ProductManagement";
-import type { Order, OrderStatus, StoreManualOverride } from "@/types/domain";
-import { MOCK_PRODUCTS } from "@/lib/mockData";
+import type {
+  Category,
+  DeliveryZone,
+  HalfAndHalfRule,
+  Order,
+  OrderStatus,
+  Product,
+  StoreManualOverride,
+} from "@/types/domain";
+import { MOCK_CATEGORIES, MOCK_DELIVERY_ZONES, MOCK_PRODUCTS } from "@/lib/mockData";
 import { reconcileOrders } from "@/domain/orderReconciliation";
 import { createClient } from "@/lib/supabase/client";
 import { audioNotifier } from "@/lib/audioNotifier";
+import { publishRealtimeSync, subscribeRealtimeSync } from "@/lib/realtimeBroadcast";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Sparkles, AlertCircle } from "lucide-react";
 
 export default function AdminPage() {
   const [orders, setOrders] = React.useState<Order[]>([]);
+  const [products, setProducts] = React.useState<Product[]>(MOCK_PRODUCTS);
+  const [categories, setCategories] = React.useState<Category[]>(MOCK_CATEGORIES);
+  const [deliveryZones, setDeliveryZones] = React.useState<DeliveryZone[]>(MOCK_DELIVERY_ZONES);
   const [activeTab, setActiveTab] = React.useState<"kanban" | "cardapio">("kanban");
   const [storeStatus, setStoreStatus] = React.useState<StoreManualOverride>("auto");
+  const [halfAndHalfRule, setHalfAndHalfRule] = React.useState<HalfAndHalfRule>("maior_valor");
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [realtimeConnected, setRealtimeConnected] = React.useState(false);
 
-  // 1. Busca inicial e polling de fallback/resync a cada 10 segundos
+  // 1. Busca pedidos com cache desabilitado
   const fetchOrders = React.useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await fetch("/api/orders");
+      const res = await fetch("/api/orders", { cache: "no-store" });
       const data = await res.json();
       if (res.ok && data.success && Array.isArray(data.orders)) {
         setOrders((prev) => {
@@ -44,25 +57,56 @@ export default function AdminPage() {
     }
   }, []);
 
-  // 2. Busca inicial do status da loja
-  React.useEffect(() => {
-    const fetchStoreStatus = async () => {
-      try {
-        const res = await fetch("/api/store/status");
-        const data = await res.json();
-        if (res.ok && data.success && data.manual_override) {
-          setStoreStatus(data.manual_override);
-        }
-      } catch {
-        // Fallback mantém 'auto'
+  const fetchProducts = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/products", { cache: "no-store" });
+      const data = await res.json();
+      if (res.ok && data.success && Array.isArray(data.products)) {
+        setProducts(data.products);
       }
-    };
+      if (res.ok && data.success && Array.isArray(data.categories)) {
+        setCategories(data.categories);
+      }
+    } catch {
+      // Fallback mantém lista atual
+    }
+  }, []);
 
-    fetchStoreStatus();
-    fetchOrders();
-  }, [fetchOrders]);
+  const fetchStoreStatus = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/store/status", { cache: "no-store" });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        if (data.manual_override) setStoreStatus(data.manual_override);
+        if (data.half_and_half_pricing_rule) setHalfAndHalfRule(data.half_and_half_pricing_rule);
+        if (Array.isArray(data.deliveryZones)) setDeliveryZones(data.deliveryZones);
+      }
+    } catch {
+      // Fallback mantém valores padrão
+    }
+  }, []);
 
-  // 3. Supabase Realtime como mecanismo principal de baixa latência
+  // 2. Hidratação inicial do painel
+  React.useEffect(() => {
+    void fetchStoreStatus();
+    void fetchProducts();
+    void fetchOrders();
+  }, [fetchStoreStatus, fetchProducts, fetchOrders]);
+
+  // 3. Barramento instantâneo multi-abas (recebe novos pedidos da loja em <10ms)
+  React.useEffect(() => {
+    return subscribeRealtimeSync(["orders", "products", "store_settings"], (ev) => {
+      if (ev.topic === "orders") {
+        void fetchOrders();
+      } else if (ev.topic === "products") {
+        void fetchProducts();
+      } else if (ev.topic === "store_settings") {
+        void fetchStoreStatus();
+      }
+    });
+  }, [fetchOrders, fetchProducts, fetchStoreStatus]);
+
+  // 4. Supabase Realtime como canal primário entre dispositivos
   React.useEffect(() => {
     const supabase = createClient();
 
@@ -93,17 +137,16 @@ export default function AdminPage() {
     };
   }, []);
 
-  // 4. Fallback: Polling a cada 10s para reconciliação e resync em caso de oscilação
+  // 5. Fallback: Polling a cada 5s para reconciliação rápida e resync em caso de oscilação
   React.useEffect(() => {
-    const interval = setInterval(fetchOrders, 10000);
+    const interval = setInterval(fetchOrders, 5000);
     return () => clearInterval(interval);
   }, [fetchOrders]);
 
-  // 5. Atualização controlada de status com validação no servidor
+  // 6. Atualização controlada de status com validação no servidor
   const handleStatusChange = async (id: string, newStatus: OrderStatus) => {
     setErrorMessage(null);
 
-    // Otimista inicial
     setOrders((prev) =>
       prev.map((o) =>
         o.id === id ? { ...o, status: newStatus, updated_at: new Date().toISOString() } : o
@@ -121,14 +164,14 @@ export default function AdminPage() {
 
       if (res.ok && data.success && data.order) {
         setOrders((prev) => reconcileOrders(prev, data.order).orders);
+        publishRealtimeSync("orders", id);
       } else {
         setErrorMessage(data.error || "Transição de status não autorizada pelo servidor.");
-        // Reverte estado buscando a fonte da verdade do servidor
-        fetchOrders();
+        void fetchOrders();
       }
     } catch {
       setErrorMessage("Erro de comunicação ao atualizar status do pedido.");
-      fetchOrders();
+      void fetchOrders();
     }
   };
 
@@ -176,10 +219,11 @@ export default function AdminPage() {
           const { orders: reconciled } = reconcileOrders(prev, data.order);
           return reconciled;
         });
+        publishRealtimeSync("orders", data.order.id);
         audioNotifier.playOrderAlert();
       }
     } catch {
-      // Fallback
+      // Fallback silencioso
     }
   };
 
@@ -188,11 +232,11 @@ export default function AdminPage() {
       <AdminHeader activeTab={activeTab} onTabChange={setActiveTab} />
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
-        {/* Banner Operacional com Ações Rápidas */}
+        {/* Banner Operacional */}
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-pizza-border pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <Badge variant="terracotta">Fase 5 — Painel & Kanban Realtime</Badge>
+              <Badge variant="terracotta">Operação em Tempo Real</Badge>
               <Badge
                 variant="outline"
                 className={
@@ -201,7 +245,7 @@ export default function AdminPage() {
                     : "text-amber-400 border-amber-500/30"
                 }
               >
-                ● {realtimeConnected ? "Realtime Conectado" : "Polling Ativo (10s Fallback)"}
+                ● {realtimeConnected ? "Realtime Conectado" : "Sincronia Ativa (Multi-Abas & Polling)"}
               </Badge>
             </div>
             <h1 className="text-2xl sm:text-3xl font-serif font-black text-pizza-cream mt-1">
@@ -243,10 +287,10 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* 1. Métricas do Turno (Fonte Única de Verdade) */}
+        {/* Métricas do Turno */}
         <MetricsCards orders={orders} />
 
-        {/* 2. Conteúdo da Aba Selecionada */}
+        {/* Conteúdo da Aba Selecionada */}
         {activeTab === "kanban" ? (
           <KanbanBoard
             orders={orders}
@@ -256,9 +300,15 @@ export default function AdminPage() {
           />
         ) : (
           <ProductManagement
-            initialProducts={MOCK_PRODUCTS}
+            initialProducts={products}
+            categories={categories}
             storeStatus={storeStatus}
             onStoreStatusChange={setStoreStatus}
+            halfAndHalfRule={halfAndHalfRule}
+            onHalfAndHalfRuleChange={setHalfAndHalfRule}
+            deliveryZones={deliveryZones}
+            onDeliveryZonesChange={setDeliveryZones}
+            onProductsChange={setProducts}
           />
         )}
       </main>

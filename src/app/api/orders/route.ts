@@ -1,21 +1,28 @@
 import { NextResponse } from "next/server";
 import { validateAndRecalculateOrder } from "@/domain/orderValidator";
 import { globalOrderRepository } from "@/repositories/mockOrderRepository";
-import { MOCK_PRODUCTS, MOCK_DELIVERY_ZONES, MOCK_STORE_SETTINGS } from "@/lib/mockData";
+import { getCatalogStore } from "@/lib/mockData";
 import { validateStatusTransition } from "@/domain/orderTransitions";
 import { authenticateServerRequest } from "@/lib/auth/serverAuth";
 import type { OrderStatus } from "@/types/domain";
 import { ZodError } from "zod";
 
+export const dynamic = "force-dynamic";
+
+const NO_STORE_HEADERS = {
+  "Cache-Control": "no-store, max-age=0",
+};
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    const store = getCatalogStore();
 
     // 1. Recálculo total e validação no servidor (BACKEND É A FONTE DA VERDADE)
     const { order, priceTampered } = validateAndRecalculateOrder(body, {
-      products: MOCK_PRODUCTS,
-      deliveryZones: MOCK_DELIVERY_ZONES,
-      settings: MOCK_STORE_SETTINGS,
+      products: store.products,
+      deliveryZones: store.deliveryZones,
+      settings: store.storeSettings,
     });
 
     // 2. Persistência no Repositório de Pedidos
@@ -83,7 +90,7 @@ export async function GET(request: Request) {
       );
     }
 
-    return NextResponse.json({ success: true, order });
+    return NextResponse.json({ success: true, order }, { headers: NO_STORE_HEADERS });
   }
 
   // Listagem geral de pedidos é RESTRITA a staff ou admin
@@ -93,7 +100,7 @@ export async function GET(request: Request) {
   }
 
   const orders = await globalOrderRepository.listAll(50);
-  return NextResponse.json({ success: true, orders });
+  return NextResponse.json({ success: true, orders }, { headers: NO_STORE_HEADERS });
 }
 
 export async function PATCH(request: Request) {

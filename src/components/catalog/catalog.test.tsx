@@ -78,4 +78,27 @@ describe("CatalogSection Component Suite", () => {
       expect(handleCustomize).toHaveBeenCalledTimes(1);
     }
   });
+
+  it("deve filtrar produtos por selos dietéticos Vegetarianas e Picantes", () => {
+    render(
+      <CatalogSection
+        products={MOCK_PRODUCTS}
+        categories={MOCK_CATEGORIES}
+        onCustomizePizza={vi.fn()}
+        onAddRegularItem={vi.fn()}
+      />
+    );
+
+    const vegBtn = screen.getByRole("button", { name: /vegetarianas/i });
+    fireEvent.click(vegBtn);
+    expect(screen.getByText("Margherita Especial")).toBeDefined();
+    expect(screen.queryByText("Calabresa Artesanal Defumada")).toBeNull();
+
+    // Desmarca Vegetarianas e ativa Picantes
+    fireEvent.click(vegBtn);
+    const spicyBtn = screen.getByRole("button", { name: /picantes/i });
+    fireEvent.click(spicyBtn);
+    expect(screen.getByText("Calabresa Artesanal Defumada")).toBeDefined();
+    expect(screen.queryByText("Margherita Especial")).toBeNull();
+  });
 });

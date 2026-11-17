@@ -31,6 +31,15 @@ bun.lock*
 # uploads
 /public/uploads/
 
+# archives & temp artifacts
+*.zip
+/supabase/.temp/
+/playwright-report/
+/test-results/
+/out/
+/.pages-build-stash/
+/.pages-build/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

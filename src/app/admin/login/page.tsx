@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
-import { Lock, ArrowRight, Pizza, AlertCircle } from "lucide-react";
+import { Lock, ArrowRight, Pizza, AlertCircle, ShieldCheck, ChefHat } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminLoginPage() {
@@ -17,6 +17,8 @@ export default function AdminLoginPage() {
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
+
+  const isDemoAccessAvailable = process.env.NODE_ENV !== "production";
 
   React.useEffect(() => {
     checkSession();
@@ -48,6 +50,31 @@ export default function AdminLoginPage() {
     }
   };
 
+  const handleQuickDemoSession = async (role: "admin" | "staff") => {
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/test-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      });
+
+      if (!res.ok) {
+        setError("Sessão rápida indisponível neste ambiente.");
+        setLoading(false);
+        return;
+      }
+
+      await checkSession();
+      router.push("/admin");
+    } catch {
+      setError("Erro ao iniciar sessão de homologação.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-pizza-charcoal text-pizza-cream flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden">
       {/* Glow de fundo */}
@@ -61,12 +88,12 @@ export default function AdminLoginPage() {
               <Pizza className="w-5 h-5" />
             </div>
             <span className="font-serif text-2xl font-black text-pizza-cream tracking-tight">
-              Pizzaria<span className="text-pizza-terracotta">.io</span>
+              Forno &amp; Massa
             </span>
           </Link>
           <div className="pt-2">
             <Badge variant="outline" className="text-xs">
-              Portal Operacional & Cozinha
+              Portal Operacional &amp; Cozinha
             </Badge>
           </div>
         </div>
@@ -136,10 +163,49 @@ export default function AdminLoginPage() {
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </form>
+
+            {/* Acesso Rápido de Homologação (Exclusivo fora de produção) */}
+            {isDemoAccessAvailable && (
+              <div className="pt-4 border-t border-pizza-border space-y-2.5">
+                <p className="text-[11px] font-semibold text-stone-400 text-center">
+                  Acesso Rápido de Homologação (Ambiente Local)
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={loading}
+                    onClick={() => handleQuickDemoSession("admin")}
+                    className="text-xs font-bold gap-1.5"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-pizza-gold" />
+                    <span>Gerente (Admin)</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={loading}
+                    onClick={() => handleQuickDemoSession("staff")}
+                    className="text-xs font-bold gap-1.5"
+                  >
+                    <ChefHat className="w-3.5 h-3.5 text-pizza-terracotta" />
+                    <span>Cozinha (Staff)</span>
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        <div className="text-center">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <Link
+            href="/demo"
+            className="text-xs font-semibold text-pizza-gold hover:text-amber-300 transition-colors inline-flex items-center gap-1.5"
+          >
+            <span>Explorar Demo Sandbox Interativa (Sem Login) →</span>
+          </Link>
           <Link
             href="/"
             className="text-xs text-stone-400 hover:text-pizza-gold transition-colors inline-flex items-center gap-1"

@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { SwRegister } from "@/components/pwa/SwRegister";
+import "./fonts.css";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://pizzaria.io";
@@ -170,7 +172,8 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(restaurantJsonLd) }}
         />
       </head>
-      <body className="antialiased selection:bg-pizza-terracotta selection:text-white bg-pizza-charcoal text-pizza-cream">
+      <body className="antialiased selection:bg-pizza-terracotta selection:text-white bg-pizza-charcoal text-pizza-cream font-sans">
+        <SwRegister />
         {children}
       </body>
     </html>
